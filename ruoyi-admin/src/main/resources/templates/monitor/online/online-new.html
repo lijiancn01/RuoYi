@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro" x-data="onlinePage()">
+<head>
+    <th:block th:include="include-new :: header-new('在线用户列表')" />
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- 搜索栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <form id="online-form" class="flex flex-wrap gap-4 items-end">
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录地址：</label>
+                    <input type="text" name="ipaddr" x-model="searchParams.ipaddr"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录名称：</label>
+                    <input type="text" name="loginName" x-model="searchParams.loginName"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" @click="searchOnline()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <i class="fa fa-search"></i>
+                        搜索
+                    </button>
+                    <button type="button" @click="resetSearch()"
+                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+                        <i class="fa fa-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 工具栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 flex flex-wrap gap-2">
+            <a shiro:hasPermission="monitor:online:batchForceLogout"
+               @click="batchForceLogout()"
+               :class="{'opacity-50 cursor-not-allowed': selectedSessionIds.length === 0}"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-sign-out"></i>
+                强退
+            </a>
+        </div>
+        
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left w-12">
+                            <input type="checkbox" @change="toggleSelectAll($event)"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">序号</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">会话编号</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录名称</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">部门名称</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">主机</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录地点</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">浏览器</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">操作系统</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">会话状态</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录时间</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">最后访问时间</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr x-show="loading" colspan="13">
+                        <td colspan="13" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>加载中...</p>
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && onlineUsers.length === 0" colspan="13">
+                        <td colspan="13" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无数据</p>
+                        </td>
+                    </tr>
+                    <template x-for="(user, index) in onlineUsers" :key="user.sessionId">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" 
+                                       :value="user.sessionId" 
+                                       x-model="selectedSessionIds"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="index + 1"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.sessionId"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.loginName"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.deptName || '-'"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.ipaddr"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.loginLocation"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.browser"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.os"></td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 text-xs rounded" 
+                                      :class="user.status == 'on_line' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'"
+                                      x-text="user.status == 'on_line' ? '在线' : '离线'"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.startTimestamp"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.lastAccessTime"></td>
+                            <td class="px-4 py-3 text-center">
+                                <button shiro:hasPermission="monitor:online:forceLogout"
+                                        @click="forceLogout(user.sessionId)"
+                                        class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+                                    <i class="fa fa-sign-out mr-1"></i>强退
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                显示 <span x-text="startIndex"></span> - <span x-text="endIndex"></span> 条，共 <span x-text="total"></span> 条
+            </div>
+            <div class="flex gap-2">
+                <button @click="prevPage()" 
+                        :disabled="pageNum <= 1"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+                <button x-for="p in visiblePages" 
+                        :key="p"
+                        @click="goToPage(p)"
+                        :class="{'bg-blue-600 text-white': p === pageNum, 'bg-white text-gray-700 hover:bg-gray-50': p !== pageNum}"
+                        class="px-3 py-1 border border-gray-300 rounded">
+                    <span x-text="p"></span>
+                </button>
+                <button @click="nextPage()" 
+                        :disabled="pageNum >= totalPages"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var prefix = ctx + "monitor/online";
+        
+        function onlinePage() {
+            return {
+                loading: false,
+                onlineUsers: [],
+                selectedSessionIds: [],
+                searchParams: {
+                    ipaddr: '',
+                    loginName: ''
+                },
+                pageNum: 1,
+                pageSize: 10,
+                total: 0,
+                
+                init() {
+                    this.loadOnlineUsers();
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.total / this.pageSize);
+                },
+                
+                get visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pageNum - 2);
+                    const end = Math.min(this.totalPages, this.pageNum + 2);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                },
+                
+                get startIndex() {
+                    return Math.min((this.pageNum - 1) * this.pageSize + 1, this.total);
+                },
+                
+                get endIndex() {
+                    return Math.min(this.pageNum * this.pageSize, this.total);
+                },
+                
+                async loadOnlineUsers() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        Object.keys(this.searchParams).forEach(key => {
+                            if (this.searchParams[key]) {
+                                params.append(key, this.searchParams[key]);
+                            }
+                        });
+                        params.append('pageNum', this.pageNum);
+                        params.append('pageSize', this.pageSize);
+                        
+                        const response = await fetch(prefix + '/list?' + params.toString());
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            this.onlineUsers = data.rows || [];
+                            this.total = data.total || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载在线用户失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedSessionIds = this.onlineUsers.map(u => u.sessionId);
+                    } else {
+                        this.selectedSessionIds = [];
+                    }
+                },
+                
+                searchOnline() {
+                    this.pageNum = 1;
+                    this.loadOnlineUsers();
+                },
+                
+                resetSearch() {
+                    this.searchParams = {
+                        ipaddr: '',
+                        loginName: ''
+                    };
+                    this.pageNum = 1;
+                    this.loadOnlineUsers();
+                },
+                
+                forceLogout(sessionId) {
+                    if (confirm('确定要强制该用户下线吗？')) {
+                        fetch(prefix + '/batchForceLogout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + sessionId
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('操作成功');
+                                this.loadOnlineUsers();
+                            } else {
+                                alert(data.msg || '操作失败');
+                            }
+                        });
+                    }
+                },
+                
+                batchForceLogout() {
+                    if (this.selectedSessionIds.length === 0) {
+                        alert('请选择要强退的用户');
+                        return;
+                    }
+                    if (confirm(`确认要强退选中的 ${this.selectedSessionIds.length} 个用户吗？`)) {
+                        fetch(prefix + '/batchForceLogout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + this.selectedSessionIds.join(',')
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('操作成功');
+                                this.selectedSessionIds = [];
+                                this.loadOnlineUsers();
+                            } else {
+                                alert(data.msg || '操作失败');
+                            }
+                        });
+                    }
+                },
+                
+                prevPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        this.loadOnlineUsers();
+                    }
+                },
+                
+                nextPage() {
+                    if (this.pageNum < this.totalPages) {
+                        this.pageNum++;
+                        this.loadOnlineUsers();
+                    }
+                },
+                
+                goToPage(page) {
+                    this.pageNum = page;
+                    this.loadOnlineUsers();
+                }
+            }
+        }
+    </script>
+    
+    <th:block th:include="include-new :: footer-new" />
+</body>
+</html>
