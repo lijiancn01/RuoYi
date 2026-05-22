@@ -65,7 +65,7 @@ public class SysUserController extends BaseController
     @GetMapping()
     public String user()
     {
-        return prefix + "/user";
+        return prefix + "/user-new";
     }
 
     @RequiresPermissions("system:user:list")

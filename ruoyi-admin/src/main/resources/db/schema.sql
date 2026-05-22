@@ -684,9 +684,9 @@ create table sys_job (
   primary key (job_id, job_name, job_group)
 );
 
-insert into sys_job values(1, '系统默认（无参）', 'DEFAULT', 'ryTask.ryNoParams',        '0/10 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null, '');
-insert into sys_job values(2, '系统默认（有参）', 'DEFAULT', 'ryTask.ryParams(\'ry\')',  '0/15 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null, '');
-insert into sys_job values(3, '系统默认（多参）', 'DEFAULT', 'ryTask.ryMultipleParams(\'ry\', true, 2000, 316.5, 100)',  '0/20 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null, '');
+insert into sys_job(job_id, job_name, job_group, invoke_target, cron_expression, misfire_policy, concurrent, status, create_by, create_time, update_by, update_time) values(1, '系统默认（无参）', 'DEFAULT', 'ryTask.ryNoParams', '0/10 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null);
+insert into sys_job(job_id, job_name, job_group, invoke_target, cron_expression, misfire_policy, concurrent, status, create_by, create_time, update_by, update_time) values(2, '系统默认（有参）', 'DEFAULT', 'ryTask.ryParams("ry")', '0/15 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null);
+insert into sys_job(job_id, job_name, job_group, invoke_target, cron_expression, misfire_policy, concurrent, status, create_by, create_time, update_by, update_time) values(3, '系统默认（多参）', 'DEFAULT', 'ryTask.ryMultipleParams("ry", true, 2000, 316.5, 100)', '0/20 * * * * ?', '3', '1', '1', 'admin', CURRENT_TIMESTAMP(), '', null);
 
 
 -- ----------------------------
@@ -729,6 +729,6 @@ create table sys_notice (
 -- ----------------------------
 -- 初始化-公告信息表数据
 -- ----------------------------
-insert into sys_notice values('1', '温馨提醒：2018-07-01 若依新版本发布啦', '2', '新版本内容', '0', 'admin', CURRENT_TIMESTAMP(), '', null, '管理员');
-insert into sys_notice values('2', '维护通知：2018-07-01 若依系统凌晨维护', '1', '维护内容',   '0', 'admin', CURRENT_TIMESTAMP(), '', null, '管理员');
-insert into sys_notice values('3', '若依开源框架介绍', '1', '&lt;p&gt;&lt;span style=&quot;color: rgb(230, 0, 0);&quot;&gt;项目介绍&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;font color=&quot;#333333&quot;&gt;RuoYi开源项目是为企业用户定制的后台脚手架框架，为企业打造的一站式解决方案，降低企业开发成本，提升开发效率。主要包括用户管理、角色管理、部门管理、菜单管理、参数管理、字典管理、&lt;/font&gt;&lt;span style=&quot;color: rgb(51, 51, 51);&quot;&gt;岗位管理&lt;/span&gt;&lt;span style=&quot;color: rgb(51, 51, 51);&quot;&gt;、定时任务&lt;/span&gt;&lt;span style=&quot;color: rgb(51, 51, 51);&quot;&gt;、&lt;/span&gt;&lt;span style=&quot;color: rgb(51, 51, 51);&quot;&gt;服务监控、登录日志、操作日志、代码生成等功能。其中，还支持多数据源、数据权限、国际化、Redis缓存、Docker部署、滑动验证码、第三方认证登录、分布式事务、&lt;/span&gt;&lt;font color=&quot;#333333&quot;&gt;分布式文件存储&lt;/span&gt;&lt;span style=&quot;color: rgb(51
+insert into sys_notice(notice_id, notice_title, notice_type, notice_content, status, create_by, create_time, update_by, update_time, remark) values(1, '温馨提醒：2018-07-01 若依新版本发布啦', '2', '新版本内容', '0', 'admin', CURRENT_TIMESTAMP(), '', null, '管理员');
+insert into sys_notice(notice_id, notice_title, notice_type, notice_content, status, create_by, create_time, update_by, update_time, remark) values(2, '维护通知：2018-07-01 若依系统凌晨维护', '1', '维护内容', '0', 'admin', CURRENT_TIMESTAMP(), '', null, '管理员');
+insert into sys_notice(notice_id, notice_title, notice_type, notice_content, status, create_by, create_time, update_by, update_time, remark) values(3, '若依开源框架介绍', '1', '<p><span style=\"color: rgb(230, 0, 0);\">项目介绍</span></p><p>RuoYi开源项目是为企业用户定制的后台脚手架框架</p>', '0', 'admin', CURRENT_TIMESTAMP(), '', null, '管理员');
