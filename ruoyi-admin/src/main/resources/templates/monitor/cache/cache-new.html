@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" x-data="cacheMonitorPage()">
+<head>
+    <th:block th:include="include-new :: header-new('缓存监控')" />
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <input type="hidden" id="cacheName" x-model="currentCacheName">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- 缓存列表 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h5 class="font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa fa-bars text-blue-500"></i> 缓存列表
+                    </h5>
+                    <button @click="getCacheNames()" class="text-blue-600 hover:text-blue-800">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+                <div class="max-h-[500px] overflow-y-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">序号</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">缓存名称</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-12">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr x-show="loading" class="hover:bg-gray-50">
+                                <td colspan="3" class="px-3 py-8 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-xl"></i>
+                                </td>
+                            </tr>
+                            <template x-for="(name, index) in cacheNames" :key="name">
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="{'bg-blue-50': currentCacheName === name}"
+                                    @click="getCacheKeys(name)">
+                                    <td class="px-3 py-2 text-sm text-gray-600" x-text="index + 1"></td>
+                                    <td class="px-3 py-2 text-sm text-gray-800 break-all" x-text="name"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button @click.stop="clearCacheName(name)" 
+                                                class="text-red-600 hover:text-red-800" title="清空">
+                                            <i class="fa fa-trash-o"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 键名列表 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h5 class="font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa fa-key text-green-500"></i> 键名列表
+                    </h5>
+                    <button @click="getCacheKeys('', true)" class="text-blue-600 hover:text-blue-800">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+                <div class="max-h-[500px] overflow-y-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">序号</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">缓存键名</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-12">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr x-show="loading" class="hover:bg-gray-50">
+                                <td colspan="3" class="px-3 py-8 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-xl"></i>
+                                </td>
+                            </tr>
+                            <tr x-show="!loading && cacheKeys.length === 0" class="hover:bg-gray-50">
+                                <td colspan="3" class="px-3 py-8 text-center text-gray-500">
+                                    <i class="fa fa-inbox text-2xl mb-2"></i>
+                                    <p>暂无数据</p>
+                                </td>
+                            </tr>
+                            <template x-for="(key, index) in cacheKeys" :key="key">
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="{'bg-blue-50': currentCacheKey === key}"
+                                    @click="getCacheValue(key)">
+                                    <td class="px-3 py-2 text-sm text-gray-600" x-text="index + 1"></td>
+                                    <td class="px-3 py-2 text-sm text-gray-800 break-all" x-text="key"></td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button @click.stop="clearCacheKey(key)" 
+                                                class="text-red-600 hover:text-red-800" title="清空">
+                                            <i class="fa fa-trash-o"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 缓存内容 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h5 class="font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa fa-file-text text-yellow-500"></i> 缓存内容
+                    </h5>
+                    <button @click="clearAll()" class="text-red-600 hover:text-red-800 flex items-center gap-1">
+                        <i class="fa fa-refresh"></i> 清理全部
+                    </button>
+                </div>
+                <div class="p-4">
+                    <div x-show="cacheLoading" class="flex items-center justify-center h-32 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-xl mr-2"></i>
+                        加载中...
+                    </div>
+                    
+                    <div x-show="!cacheLoading && !currentCacheName" class="text-center py-12 text-gray-500">
+                        <i class="fa fa-hand-pointer-o text-4xl mb-4"></i>
+                        <p>点击左侧缓存查看详情</p>
+                    </div>
+                    
+                    <div x-show="!cacheLoading && currentCacheName">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">缓存名称：</label>
+                                <input type="text" readonly x-model="currentCacheName"
+                                       class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">缓存键名：</label>
+                                <input type="text" readonly x-model="currentCacheKey"
+                                       class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">缓存内容：</label>
+                                <textarea readonly x-model="currentCacheValue" rows="6"
+                                          class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 font-mono text-sm"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var prefix = ctx + "monitor/cache";
+        
+        function cacheMonitorPage() {
+            return {
+                cacheNames: [],
+                cacheKeys: [],
+                currentCacheName: '',
+                currentCacheKey: '',
+                currentCacheValue: '',
+                loading: false,
+                cacheLoading: false,
+                
+                init() {
+                    this.getCacheNames();
+                },
+                
+                async getCacheNames() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(prefix + '/getNames', { method: 'POST' });
+                        const data = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/html');
+                        const rows = doc.querySelectorAll('tr');
+                        this.cacheNames = [];
+                        rows.forEach(row => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 2) {
+                                const name = cells[1].textContent.trim();
+                                if (name) this.cacheNames.push(name);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('获取缓存列表失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async getCacheKeys(cacheName, isMsg = false) {
+                    const name = cacheName || this.currentCacheName;
+                    if (!name) return;
+                    
+                    this.currentCacheName = name;
+                    this.loading = true;
+                    try {
+                        const response = await fetch(prefix + '/getKeys', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'cacheName=' + encodeURIComponent(name)
+                        });
+                        const data = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/html');
+                        const rows = doc.querySelectorAll('tr');
+                        this.cacheKeys = [];
+                        rows.forEach(row => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 2) {
+                                const key = cells[1].textContent.trim();
+                                if (key) this.cacheKeys.push(key);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('获取键名列表失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async getCacheValue(cacheKey) {
+                    if (!this.currentCacheName || !cacheKey) return;
+                    
+                    this.currentCacheKey = cacheKey;
+                    this.cacheLoading = true;
+                    try {
+                        const response = await fetch(prefix + '/getValue', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'cacheName=' + encodeURIComponent(this.currentCacheName) + '&cacheKey=' + encodeURIComponent(cacheKey)
+                        });
+                        const data = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/html');
+                        
+                        const cacheNameInput = doc.querySelector('input[th\\:value]');
+                        const cacheValueTextarea = doc.querySelector('textarea');
+                        
+                        this.currentCacheValue = cacheValueTextarea ? cacheValueTextarea.textContent.trim() : '';
+                    } catch (error) {
+                        console.error('获取缓存内容失败:', error);
+                    } finally {
+                        this.cacheLoading = false;
+                    }
+                },
+                
+                async clearCacheName(cacheName) {
+                    if (!confirm('确认要清空缓存 [' + cacheName + '] 吗？')) return;
+                    
+                    try {
+                        const response = await fetch(prefix + '/clearCacheName', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'cacheName=' + encodeURIComponent(cacheName)
+                        });
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            alert('清理缓存 [' + cacheName + '] 成功');
+                            this.getCacheKeys(cacheName);
+                        } else {
+                            alert(data.msg || '清理失败');
+                        }
+                    } catch (error) {
+                        alert('清理失败');
+                    }
+                },
+                
+                async clearCacheKey(cacheKey) {
+                    if (!confirm('确认要清空缓存键 [' + cacheKey + '] 吗？')) return;
+                    
+                    try {
+                        const response = await fetch(prefix + '/clearCacheKey', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'cacheName=' + encodeURIComponent(this.currentCacheName) + '&cacheKey=' + encodeURIComponent(cacheKey)
+                        });
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            alert('清理缓存键 [' + cacheKey + '] 成功');
+                            this.getCacheKeys(this.currentCacheName);
+                        } else {
+                            alert(data.msg || '清理失败');
+                        }
+                    } catch (error) {
+                        alert('清理失败');
+                    }
+                },
+                
+                async clearAll() {
+                    if (!confirm('确认要清理全部缓存吗？')) return;
+                    
+                    try {
+                        const response = await fetch(prefix + '/clearAll');
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            alert('清理全部缓存成功');
+                            this.getCacheNames();
+                            this.cacheKeys = [];
+                            this.currentCacheName = '';
+                            this.currentCacheKey = '';
+                            this.currentCacheValue = '';
+                        } else {
+                            alert(data.msg || '清理失败');
+                        }
+                    } catch (error) {
+                        alert('清理失败');
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <th:block th:include="include-new :: footer-new" />
+</body>
+</html>
