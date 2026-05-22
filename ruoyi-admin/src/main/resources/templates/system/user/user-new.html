@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro" x-data="userPage()">
+<head>
+    <th:block th:include="include-new :: header-new('用户列表')" />
+    <style>
+        .tree-node { cursor: pointer; transition: all 0.2s; }
+        .tree-node:hover { background-color: #f3f4f6; }
+        .tree-node.selected { background-color: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex h-screen">
+        <!-- 左侧组织机构树 -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-sitemap text-blue-600"></i>
+                        组织机构
+                    </h3>
+                    <div class="flex gap-1">
+                        <a class="p-1 hover:bg-gray-200 rounded text-gray-500" 
+                           href="javascript:void(0)" 
+                           onclick="dept()" 
+                           title="管理部门">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                        <button class="p-1 hover:bg-gray-200 rounded text-gray-500" 
+                                id="btnExpand" 
+                                title="展开" 
+                                x-show="!treeExpanded"
+                                @click="expandTree(true)">
+                            <i class="fa fa-chevron-up"></i>
+                        </button>
+                        <button class="p-1 hover:bg-gray-200 rounded text-gray-500" 
+                                id="btnCollapse" 
+                                title="折叠"
+                                x-show="treeExpanded"
+                                @click="expandTree(false)">
+                            <i class="fa fa-chevron-down"></i>
+                        </button>
+                        <button class="p-1 hover:bg-gray-200 rounded text-gray-500" 
+                                id="btnRefresh" 
+                                title="刷新部门"
+                                @click="refreshDeptTree()">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2" id="tree">
+                <!-- 树形结构将通过 JavaScript 渲染 -->
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧主内容 -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- 搜索栏 -->
+            <div class="bg-white border-b border-gray-200 p-4">
+                <form id="user-form" class="flex flex-wrap gap-4 items-end">
+                    <input type="hidden" id="deptId" name="deptId" x-model="searchParams.deptId">
+                    <input type="hidden" id="parentId" name="parentId" x-model="searchParams.parentId">
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 font-medium">登录名称：</label>
+                        <input type="text" name="loginName" x-model="searchParams.loginName"
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 font-medium">手机号码：</label>
+                        <input type="text" name="phonenumber" x-model="searchParams.phonenumber"
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 font-medium">用户状态：</label>
+                        <select name="status" x-model="searchParams.status"
+                                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">所有</option>
+                            <option value="0">正常</option>
+                            <option value="1">停用</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <label class="text-gray-700 font-medium">创建时间：</label>
+                        <input type="date" id="startTime" x-model="searchParams.beginTime"
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <span class="text-gray-500">-</span>
+                        <input type="date" id="endTime" x-model="searchParams.endTime"
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button type="button" @click="searchUsers()"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                            <i class="fa fa-search"></i>
+                            搜索
+                        </button>
+                        <button type="button" @click="resetSearch()"
+                                class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+                            <i class="fa fa-refresh"></i>
+                            重置
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- 工具栏 -->
+            <div class="bg-white border-b border-gray-200 p-4 flex flex-wrap gap-2">
+                <a shiro:hasPermission="system:user:add"
+                   @click="addUser()"
+                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-plus"></i>
+                    新增
+                </a>
+                
+                <a shiro:hasPermission="system:user:edit"
+                   @click="editUser()"
+                   :class="{'opacity-50 cursor-not-allowed': selectedUsers.length === 0}"
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-edit"></i>
+                    修改
+                </a>
+                
+                <a shiro:hasPermission="system:user:remove"
+                   @click="deleteUsers()"
+                   :class="{'opacity-50 cursor-not-allowed': selectedUsers.length === 0}"
+                   class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-trash"></i>
+                    删除
+                </a>
+                
+                <a shiro:hasPermission="system:user:import"
+                   @click="showImportDialog = true"
+                   class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-upload"></i>
+                    导入
+                </a>
+                
+                <a shiro:hasPermission="system:user:export"
+                   @click="exportUsers()"
+                   class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-download"></i>
+                    导出
+                </a>
+            </div>
+            
+            <!-- 数据表格 -->
+            <div class="flex-1 overflow-auto p-4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" @change="toggleSelectAll($event)"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户ID</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录名称</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户名称</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">部门</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">手机</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">用户状态</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">创建时间</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr x-show="loading" colspan="9">
+                                <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>加载中...</p>
+                                </td>
+                            </tr>
+                            <tr x-show="!loading && users.length === 0" colspan="9">
+                                <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                                    <p>暂无数据</p>
+                                </td>
+                            </tr>
+                            <template x-for="user in users" :key="user.userId">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" 
+                                               :value="user.userId" 
+                                               x-model="selectedUsers"
+                                               @change="toggleSelectUser(user.userId)"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userId"></td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <a @click="viewUser(user.userId)" 
+                                           class="text-blue-600 hover:text-blue-800 cursor-pointer"
+                                           x-text="user.loginName"></a>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userName"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="user.dept?.deptName || '-';"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="user.phonenumber || '-';"></td>
+                                    <td class="px-4 py-3 text-center">
+                                        <i :class="user.status == 1 ? 'fa fa-toggle-off text-gray-400' : 'fa fa-toggle-on text-green-600'"
+                                           class="fa-2x cursor-pointer"
+                                           @click="toggleUserStatus(user)"></i>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="user.createTime"></td>
+                                    <td class="px-4 py-3 text-center text-sm">
+                                        <template x-if="user.userId != 1">
+                                            <div class="flex justify-center gap-2">
+                                                <button @click="editUser(user.userId)"
+                                                        shiro:hasPermission="system:user:edit"
+                                                        class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                                                    <i class="fa fa-edit mr-1"></i>编辑
+                                                </button>
+                                                <button @click="deleteUser(user.userId)"
+                                                        shiro:hasPermission="system:user:remove"
+                                                        class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+                                                    <i class="fa fa-trash mr-1"></i>删除
+                                                </button>
+                                                <div class="relative inline-block">
+                                                    <button @click="showMore = !showMore"
+                                                            class="px-2 py-1 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-700">
+                                                        <i class="fa fa-chevron-circle-right mr-1"></i>更多
+                                                    </button>
+                                                    <div x-show="showMore" 
+                                                         @click.outside="showMore = false"
+                                                         class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                                        <button shiro:hasPermission="system:user:resetPwd"
+                                                                @click="resetPwd(user.userId)"
+                                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <i class="fa fa-key mr-2"></i>重置密码
+                                                        </button>
+                                                        <button shiro:hasPermission="system:user:edit"
+                                                                @click="authRole(user.userId)"
+                                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <i class="fa fa-check-square-o mr-2"></i>分配角色
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        显示 <span x-text="startIndex"></span> - <span x-text="endIndex"></span> 条，共 <span x-text="total"></span> 条
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="prevPage()" 
+                                :disabled="pageNum <= 1"
+                                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                        <button x-for="p in visiblePages" 
+                                :key="p"
+                                @click="goToPage(p)"
+                                :class="{'bg-blue-600 text-white': p === pageNum, 'bg-white text-gray-700 hover:bg-gray-50': p !== pageNum}"
+                                class="px-3 py-1 border border-gray-300 rounded">
+                            <span x-text="p"></span>
+                        </button>
+                        <button @click="nextPage()" 
+                                :disabled="pageNum >= totalPages"
+                                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 导入对话框 -->
+    <div x-show="showImportDialog" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.outside="showImportDialog = false">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">导入用户</h3>
+            <form enctype="multipart/form-data">
+                <div class="mb-4">
+                    <input type="file" id="file" name="file" class="w-full">
+                </div>
+                <div class="mb-4 flex items-center gap-2">
+                    <input type="checkbox" id="updateSupport" name="updateSupport" class="rounded">
+                    <label for="updateSupport" class="text-sm text-gray-600">
+                        如果登录账户已经存在，更新这条数据。
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <a @click="downloadTemplate()" class="text-blue-600 hover:text-blue-800 text-sm cursor-pointer">
+                        <i class="fa fa-file-excel-o mr-1"></i>
+                        下载模板
+                    </a>
+                </div>
+                <div class="mb-4 text-sm text-red-600">
+                    提示：仅允许导入“xls”或“xlsx”格式文件！
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button type="button" @click="showImportDialog = false"
+                            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        取消
+                    </button>
+                    <button type="button" @click="importUsers()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        确定
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var editFlag = [[${@permission.hasPermi('system:user:edit')}]];
+        var removeFlag = [[${@permission.hasPermi('system:user:remove')}]];
+        var resetPwdFlag = [[${@permission.hasPermi('system:user:resetPwd')}]];
+        var prefix = ctx + "system/user";
+        
+        function userPage() {
+            return {
+                loading: false,
+                showImportDialog: false,
+                treeExpanded: true,
+                users: [],
+                selectedUsers: [],
+                selectAll: false,
+                deptTreeData: [],
+                searchParams: {
+                    deptId: '',
+                    parentId: '',
+                    loginName: '',
+                    phonenumber: '',
+                    status: '',
+                    beginTime: '',
+                    endTime: ''
+                },
+                pageNum: 1,
+                pageSize: 10,
+                total: 0,
+                
+                init() {
+                    this.loadUsers();
+                    this.loadDeptTree();
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.total / this.pageSize);
+                },
+                
+                get visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pageNum - 2);
+                    const end = Math.min(this.totalPages, this.pageNum + 2);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                },
+                
+                get startIndex() {
+                    return Math.min((this.pageNum - 1) * this.pageSize + 1, this.total);
+                },
+                
+                get endIndex() {
+                    return Math.min(this.pageNum * this.pageSize, this.total);
+                },
+                
+                async loadUsers() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        Object.keys(this.searchParams).forEach(key => {
+                            if (this.searchParams[key]) {
+                                params.append(key, this.searchParams[key]);
+                            }
+                        });
+                        params.append('pageNum', this.pageNum);
+                        params.append('pageSize', this.pageSize);
+                        
+                        const response = await fetch(prefix + '/list?' + params.toString());
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            this.users = data.rows || [];
+                            this.total = data.total || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载用户列表失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async loadDeptTree() {
+                    try {
+                        const response = await fetch(ctx + 'system/user/deptTreeData');
+                        const data = await response.json();
+                        this.deptTreeData = data;
+                        this.renderDeptTree();
+                    } catch (error) {
+                        console.error('加载部门树失败:', error);
+                    }
+                },
+                
+                renderDeptTree() {
+                    const treeContainer = document.getElementById('tree');
+                    if (!treeContainer) return;
+                    
+                    let html = '<ul class="space-y-1">';
+                    const renderNode = (node, level = 0) => {
+                        html += `<li>
+                            <div class="tree-node px-2 py-1 rounded flex items-center gap-1"
+                                 style="padding-left: ${level * 16 + 8}px"
+                                 @click="selectDept(${node.id}, ${node.pId || 'null'})">
+                                <i class="fa fa-folder text-yellow-500 text-sm"></i>
+                                <span class="text-sm">${node.name}</span>
+                            </div>`;
+                        if (node.children && node.children.length > 0) {
+                            html += '<ul class="space-y-1 ml-2">';
+                            node.children.forEach(child => renderNode(child, level + 1));
+                            html += '</ul>';
+                        }
+                        html += '</li>';
+                    };
+                    
+                    this.deptTreeData.forEach(node => renderNode(node));
+                    html += '</ul>';
+                    treeContainer.innerHTML = html;
+                },
+                
+                selectDept(id, pId) {
+                    this.searchParams.deptId = id;
+                    this.searchParams.parentId = pId;
+                    this.loadUsers();
+                },
+                
+                expandTree(expand) {
+                    this.treeExpanded = expand;
+                },
+                
+                refreshDeptTree() {
+                    this.loadDeptTree();
+                },
+                
+                searchUsers() {
+                    this.pageNum = 1;
+                    this.loadUsers();
+                },
+                
+                resetSearch() {
+                    this.searchParams = {
+                        deptId: '',
+                        parentId: '',
+                        loginName: '',
+                        phonenumber: '',
+                        status: '',
+                        beginTime: '',
+                        endTime: ''
+                    };
+                    this.pageNum = 1;
+                    this.loadUsers();
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedUsers = this.users.map(u => u.userId);
+                    } else {
+                        this.selectedUsers = [];
+                    }
+                },
+                
+                toggleSelectUser(userId) {
+                    // 已经通过 x-model 处理了
+                },
+                
+                addUser() {
+                    window.location.href = prefix + '/add';
+                },
+                
+                editUser(userId) {
+                    if (!userId && this.selectedUsers.length !== 1) {
+                        alert('请选择一条记录进行编辑');
+                        return;
+                    }
+                    const id = userId || this.selectedUsers[0];
+                    window.location.href = prefix + '/edit/' + id;
+                },
+                
+                viewUser(userId) {
+                    window.location.href = prefix + '/view/' + userId;
+                },
+                
+                deleteUser(userId) {
+                    if (confirm('确认要删除该用户吗？')) {
+                        fetch(prefix + '/remove/' + userId, { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.code === 0) {
+                                    alert('删除成功');
+                                    this.loadUsers();
+                                } else {
+                                    alert(data.msg || '删除失败');
+                                }
+                            });
+                    }
+                },
+                
+                deleteUsers() {
+                    if (this.selectedUsers.length === 0) {
+                        alert('请选择要删除的用户');
+                        return;
+                    }
+                    if (confirm(`确认要删除选中的 ${this.selectedUsers.length} 个用户吗？`)) {
+                        fetch(prefix + '/remove', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + this.selectedUsers.join(',')
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('删除成功');
+                                this.selectedUsers = [];
+                                this.loadUsers();
+                            } else {
+                                alert(data.msg || '删除失败');
+                            }
+                        });
+                    }
+                },
+                
+                async toggleUserStatus(user) {
+                    const newStatus = user.status == 1 ? 0 : 1;
+                    const message = newStatus == 1 ? '确认要停用该用户吗？' : '确认要启用该用户吗？';
+                    
+                    if (confirm(message)) {
+                        try {
+                            const response = await fetch(prefix + '/changeStatus', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'userId=' + user.userId + '&status=' + newStatus
+                            });
+                            const data = await response.json();
+                            if (data.code === 0) {
+                                user.status = newStatus;
+                            } else {
+                                alert(data.msg || '操作失败');
+                            }
+                        } catch (error) {
+                            alert('操作失败');
+                        }
+                    }
+                },
+                
+                resetPwd(userId) {
+                    window.location.href = prefix + '/resetPwd/' + userId;
+                },
+                
+                authRole(userId) {
+                    window.location.href = prefix + '/authRole/' + userId;
+                },
+                
+                importUsers() {
+                    // 需要实现文件上传逻辑
+                    alert('导入功能待完善');
+                    this.showImportDialog = false;
+                },
+                
+                downloadTemplate() {
+                    window.location.href = prefix + '/importTemplate';
+                },
+                
+                exportUsers() {
+                    const params = new URLSearchParams();
+                    Object.keys(this.searchParams).forEach(key => {
+                        if (this.searchParams[key]) {
+                            params.append(key, this.searchParams[key]);
+                        }
+                    });
+                    window.location.href = prefix + '/export?' + params.toString();
+                },
+                
+                prevPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        this.loadUsers();
+                    }
+                },
+                
+                nextPage() {
+                    if (this.pageNum < this.totalPages) {
+                        this.pageNum++;
+                        this.loadUsers();
+                    }
+                },
+                
+                goToPage(page) {
+                    this.pageNum = page;
+                    this.loadUsers();
+                },
+                
+                dept() {
+                    window.location.href = ctx + 'system/dept';
+                }
+            }
+        }
+        
+        document.addEventListener('alpine:init', () => {
+            // 等待页面加载完成后初始化
+        });
+    </script>
+    
+    <th:block th:include="include-new :: footer-new" />
+</body>
+</html>
