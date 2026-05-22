@@ -1,0 +1,23 @@
+<!-- 新技术栈通用CSS -->
+<head th:fragment="header-new(title)">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="keywords" content="">
+	<meta name="description" content="">
+	<meta th:content="${session.csrf_token}" name="csrf-token"/>
+	<title th:text="${title}"></title>
+	<!-- Tailwind CSS 3 -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- Font Awesome 6 -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+	<!-- HTMX -->
+	<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+	<!-- Alpine.js -->
+	<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<!-- 新技术栈通用JS -->
+<div th:fragment="footer-new">
+    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = [[${session.lockscreen}]]; if(lockscreen){window.top.location=ctx+"lockscreen";} </script>
+</div>
