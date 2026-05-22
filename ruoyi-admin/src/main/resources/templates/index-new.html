@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html  lang="zh" xmlns:th="http://www.thymeleaf.org" x-data="mainLayout()">
+<head>
+    <th:block th:include="include-new :: header-new('若依系统首页')"></th:block>
+    <link rel="shortcut icon" th:href="@{favicon.ico}"/>
+    <style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        /* 过渡动画 */
+        .sidebar-transition {
+            transition: width 0.3s ease;
+        }
+        
+        /* 菜单激活状态 */
+        .menu-item-active {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+    <script>
+        function mainLayout() {
+            return {
+                sidebarOpen: true,
+                currentMenu: null,
+                openMenus: new Set(),
+                activeTab: 'system-main',
+                tabs: [
+                    { id: 'system-main', title: '首页', url: '/system/main' }
+                ],
+                notifications: [],
+                showNotifications: false,
+                showUserMenu: false,
+                
+                toggleSidebar() {
+                    this.sidebarOpen = !this.sidebarOpen;
+                },
+                
+                toggleMenu(menuId) {
+                    if (this.openMenus.has(menuId)) {
+                        this.openMenus.delete(menuId);
+                    } else {
+                        this.openMenus.add(menuId);
+                    }
+                },
+                
+                isMenuOpen(menuId) {
+                    return this.openMenus.has(menuId);
+                },
+                
+                openTab(tabId, tabTitle, tabUrl) {
+                    // 检查标签是否已存在
+                    const existingTab = this.tabs.find(t => t.id === tabId);
+                    if (existingTab) {
+                        this.activeTab = tabId;
+                        return;
+                    }
+                    // 添加新标签
+                    this.tabs.push({ id: tabId, title: tabTitle, url: tabUrl });
+                    this.activeTab = tabId;
+                },
+                
+                closeTab(tabId, event) {
+                    event.stopPropagation();
+                    if (tabId === 'system-main') return; // 不能关闭首页
+                    
+                    const index = this.tabs.findIndex(t => t.id === tabId);
+                    if (index > -1) {
+                        this.tabs.splice(index, 1);
+                        // 如果关闭的是当前标签，激活前一个标签
+                        if (this.activeTab === tabId) {
+                            this.activeTab = this.tabs.length > 0 ? this.tabs[Math.max(0, index - 1)].id : 'system-main';
+                        }
+                    }
+                },
+                
+                refreshTab() {
+                    const iframe = document.getElementById('content-iframe');
+                    if (iframe) {
+                        iframe.contentWindow.location.reload();
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-screen bg-gray-50 overflow-hidden">
+    <div class="flex h-full">
+        <!-- 左侧导航栏 -->
+        <aside 
+            class="sidebar-transition bg-gradient-to-b from-slate-800 to-slate-900 text-white flex flex-col"
+            :class="sidebarOpen ? 'w-64' : 'w-16'"
+        >
+            <!-- Logo区域 -->
+            <div class="h-16 flex items-center justify-center border-b border-slate-700">
+                <a th:href="@{/index-new}" class="flex items-center gap-2">
+                    <img th:src="@{/ruoyi.png}" alt="RuoYi" class="h-8" x-show="sidebarOpen">
+                    <span x-show="sidebarOpen" class="text-xl font-bold">RuoYi</span>
+                    <span x-show="!sidebarOpen" class="text-xl font-bold">R</span>
+                </a>
+            </div>
+            
+            <!-- 用户信息 -->
+            <div class="p-4 border-b border-slate-700" x-show="sidebarOpen">
+                <div class="flex items-center gap-3">
+                    <img 
+                        th:src="(${#strings.isEmpty(user.avatar)}) ? @{/img/profile.jpg} : @{${user.avatar}}" 
+                        th:onerror="this.src='img/profile.jpg'" 
+                        class="w-10 h-10 rounded-full border-2 border-blue-400"
+                        alt="头像"
+                    >
+                    <div class="flex-1">
+                        <div class="font-medium" th:text="${user.loginName}">用户名</div>
+                        <div class="text-xs text-slate-400 flex items-center gap-1">
+                            <i class="fas fa-circle text-green-400 text-xs"></i>在线
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 菜单列表 -->
+            <nav class="flex-1 overflow-y-auto py-4">
+                <!-- 首页 -->
+                <a 
+                    th:href="@{/system/main}" 
+                    class="menu-item flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors"
+                    @click.prevent="openTab('system-main', '首页', '/system/main')"
+                >
+                    <i class="fas fa-home w-5 text-center"></i>
+                    <span x-show="sidebarOpen">首页</span>
+                </a>
+                
+                <!-- 动态菜单 - 一级菜单 -->
+                <template th:each="menu : ${menus}">
+                    <div class="relative">
+                        <!-- 菜单项 -->
+                        <a 
+                            th:href="${#strings.isEmpty(menu.url) || menu.url == '#' ? 'javascript:void(0);' : @{${menu.url}}}"
+                            class="menu-item flex items-center justify-between px-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
+                            th:id="'menu-' + ${menu.menuId}"
+                            @click.prevent="toggleMenu('menu-' + ${menu.menuId})"
+                        >
+                            <div class="flex items-center gap-3">
+                                <i class="fas" th:class="${menu.icon}"></i>
+                                <span x-show="sidebarOpen" th:text="${menu.menuName}">菜单</span>
+                            </div>
+                            <i 
+                                x-show="sidebarOpen"
+                                class="fas transition-transform" 
+                                :class="isMenuOpen('menu-' + ${menu.menuId}) ? 'fa-chevron-down' : 'fa-chevron-right'"
+                            ></i>
+                        </a>
+                        
+                        <!-- 二级菜单 -->
+                        <div 
+                            x-show="isMenuOpen('menu-' + ${menu.menuId}) && sidebarOpen"
+                            x-transition
+                            class="bg-slate-900"
+                        >
+                            <template th:each="cmenu : ${menu.children}">
+                                <!-- 检查是否有三级菜单 -->
+                                <div th:if="${not #lists.isEmpty(cmenu.children)}">
+                                    <a 
+                                        href="javascript:void(0);"
+                                        class="menu-item flex items-center justify-between pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
+                                        th:id="'submenu-' + ${cmenu.menuId}"
+                                        @click.prevent="toggleMenu('submenu-' + ${cmenu.menuId})"
+                                    >
+                                        <span th:text="${cmenu.menuName}">子菜单</span>
+                                        <i 
+                                            class="fas transition-transform text-xs" 
+                                            :class="isMenuOpen('submenu-' + ${cmenu.menuId}) ? 'fa-chevron-down' : 'fa-chevron-right'"
+                                        ></i>
+                                    </a>
+                                    
+                                    <!-- 三级菜单 -->
+                                    <div 
+                                        x-show="isMenuOpen('submenu-' + ${cmenu.menuId})"
+                                        x-transition
+                                        class="bg-slate-800"
+                                    >
+                                        <template th:each="emenu : ${cmenu.children}">
+                                            <a 
+                                                th:href="@{${emenu.url}}"
+                                                class="menu-item flex items-center gap-3 pl-16 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                                                @click.prevent="openTab('menu-' + ${emenu.menuId}, ${emenu.menuName}, ${#strings.prepend(emenu.url, '/')})"
+                                                th:text="${emenu.menuName}"
+                                            >三级菜单</a>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <!-- 没有三级菜单的情况 -->
+                                <a 
+                                    th:if="${#lists.isEmpty(cmenu.children)}"
+                                    th:href="@{${cmenu.url}}"
+                                    class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                                    @click.prevent="openTab('menu-' + ${cmenu.menuId}, ${cmenu.menuName}, ${#strings.prepend(cmenu.url, '/')})"
+                                    th:text="${cmenu.menuName}"
+                                >二级菜单</a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </nav>
+            
+            <!-- 底部收缩按钮 -->
+            <div class="p-4 border-t border-slate-700">
+                <button 
+                    @click="toggleSidebar"
+                    class="w-full flex items-center justify-center py-2 rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                    <i :class="sidebarOpen ? 'fas fa-angle-double-left' : 'fas fa-angle-double-right'"></i>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- 右侧主内容区 -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- 顶部导航栏 -->
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm">
+                <!-- 左侧 -->
+                <div class="flex items-center gap-4">
+                    <button 
+                        @click="toggleSidebar"
+                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <i class="fas fa-bars text-gray-600"></i>
+                    </button>
+                    
+                    <!-- 面包屑导航 -->
+                    <nav class="hidden md:flex items-center gap-2 text-sm text-gray-500">
+                        <i class="fas fa-home"></i>
+                        <span>/</span>
+                        <span>首页</span>
+                    </nav>
+                </div>
+                
+                <!-- 右侧 -->
+                <div class="flex items-center gap-4">
+                    <!-- 全屏 -->
+                    <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600" title="全屏显示">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    
+                    <!-- 锁定屏幕 -->
+                    <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600" title="锁定屏幕">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                    
+                    <!-- 通知消息 -->
+                    <div class="relative">
+                        <button 
+                            @click="showNotifications = !showNotifications"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 relative"
+                            title="消息"
+                        >
+                            <i class="fas fa-bell"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        
+                        <!-- 通知下拉菜单 -->
+                        <div 
+                            x-show="showNotifications"
+                            x-transition
+                            @click.outside="showNotifications = false"
+                            class="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                        >
+                            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                                <span class="font-medium text-gray-800">通知公告</span>
+                                <a href="javascript:void(0);" class="text-sm text-blue-600 hover:underline">全部已读</a>
+                            </div>
+                            <div class="max-h-80 overflow-y-auto">
+                                <div class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">公告</span>
+                                        <span class="text-sm text-gray-400">2024-01-01</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 truncate">系统更新通知</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 用户菜单 -->
+                    <div class="relative">
+                        <button 
+                            @click="showUserMenu = !showUserMenu"
+                            class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <img 
+                                th:src="(${#strings.isEmpty(user.avatar)}) ? @{/img/profile.jpg} : @{${user.avatar}}" 
+                                th:onerror="this.src='img/profile.jpg'" 
+                                class="w-8 h-8 rounded-full"
+                                alt="头像"
+                            >
+                            <span class="hidden md:inline text-gray-700" th:text="${#strings.defaultString(user.userName, '-')}">用户名</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                        </button>
+                        
+                        <!-- 用户下拉菜单 -->
+                        <div 
+                            x-show="showUserMenu"
+                            x-transition
+                            @click.outside="showUserMenu = false"
+                            class="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                        >
+                            <a th:href="@{/system/user/profile}" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 text-gray-700">
+                                <i class="fas fa-user w-5 text-center"></i>
+                                <span>个人中心</span>
+                            </a>
+                            <a href="javascript:void(0);" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 text-gray-700">
+                                <i class="fas fa-key w-5 text-center"></i>
+                                <span>修改密码</span>
+                            </a>
+                            <a href="javascript:void(0);" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 text-gray-700">
+                                <i class="fas fa-palette w-5 text-center"></i>
+                                <span>切换主题</span>
+                            </a>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <a th:href="@{logout}" class="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 text-red-600">
+                                <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                                <span>退出登录</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- 标签页导航 -->
+            <div class="bg-white border-b border-gray-200 flex items-center">
+                <!-- 左滚动 -->
+                <button class="px-3 py-2 hover:bg-gray-100 border-r border-gray-200">
+                    <i class="fas fa-chevron-left text-gray-400"></i>
+                </button>
+                
+                <!-- 标签页列表 -->
+                <div class="flex-1 flex overflow-x-auto">
+                    <template x-for="tab in tabs" :key="tab.id">
+                        <div 
+                            class="flex items-center gap-2 px-4 py-3 border-r border-gray-200 cursor-pointer hover:bg-gray-50"
+                            :class="activeTab === tab.id ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'"
+                            @click="activeTab = tab.id"
+                        >
+                            <span x-text="tab.title"></span>
+                            <button 
+                                x-show="tab.id !== 'system-main'"
+                                @click="closeTab(tab.id, $event)"
+                                class="p-1 hover:bg-gray-200 rounded"
+                            >
+                                <i class="fas fa-times text-xs"></i>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- 右滚动和刷新 -->
+                <button class="px-3 py-2 hover:bg-gray-100 border-l border-gray-200">
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </button>
+                <button 
+                    @click="refreshTab"
+                    class="px-3 py-2 hover:bg-gray-100 border-l border-gray-200"
+                    title="刷新"
+                >
+                    <i class="fas fa-redo text-gray-400"></i>
+                </button>
+            </div>
+            
+            <!-- 内容区域 -->
+            <main class="flex-1 overflow-hidden bg-gray-100">
+                <template x-for="tab in tabs" :key="tab.id">
+                    <iframe 
+                        :id="'iframe-' + tab.id"
+                        x-show="activeTab === tab.id"
+                        th:src="@{/system/main}"
+                        :src="tab.url"
+                        class="w-full h-full border-0"
+                    ></iframe>
+                </template>
+            </main>
+            
+            <!-- 页脚 -->
+            <div class="bg-white border-t border-gray-200 px-4 py-2 text-center text-sm text-gray-500" th:if="${footer}">
+                <div class="pull-right" th:text="'© ' + ${copyrightYear} + ' RuoYi Copyright'">© 2026 RuoYi Copyright</div>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = [[${session.lockscreen}]]; if (lockscreen) { window.top.location = ctx + "lockscreen"; }</script>
+    <th:block th:include="include-new :: footer-new"></th:block>
+</body>
+</html>
