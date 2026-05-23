@@ -1,76 +1,102 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" x-data="demoTablePage()">
 <head>
-	<th:block th:include="include :: header('加载data数据')" />
+    <th:block th:include="include :: header('加载data数据')" />
 </head>
-<body class="gray-bg">
-     <div class="container-div">
-		<div class="row">
-			<div class="col-sm-12 select-table table-striped">
-				<table id="bootstrap-table"></table>
-			</div>
-		</div>
-	</div>
-    <div th:include="include :: footer"></div>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left w-12">
+                            <input type="checkbox" @change="toggleSelectAll($event)"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户ID</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户编号</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户姓名</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户手机</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">用户邮箱</th>
+                        <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">用户余额</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">用户状态</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr x-show="users.length === 0">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无数据</p>
+                        </td>
+                    </tr>
+                    <template x-for="user in users" :key="user.userId">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" 
+                                       :value="user.userId" 
+                                       x-model="selectedUsers"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userId"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userCode"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userName"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userPhone"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="user.userEmail"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600 text-right" x-text="user.userBalance"></td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 text-xs rounded" 
+                                      :class="user.status == '0' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                      x-text="user.status == '0' ? '正常' : '停用'"></span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex justify-center gap-1">
+                                    <button @click="editUser(user.userId)"
+                                            class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                                        <i class="fa fa-edit mr-1"></i>编辑
+                                    </button>
+                                    <button @click="deleteUser(user.userId)"
+                                            class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+                                        <i class="fa fa-remove mr-1"></i>删除
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
     <script th:inline="javascript">
-        var datas = [[${@dict.getType('sys_normal_disable')}]];
-
-        $(function() {
-            var options = {
-                data: [[${users}]],
-                sidePagination: "client",
-		        showSearch: false,
-		        showRefresh: false,
-		        showToggle: false,
-		        showColumns: false,
-                columns: [{
-		            checkbox: true
-		        },
-				{
-					field : 'userId', 
-					title : '用户ID'
-				},
-				{
-					field : 'userCode', 
-					title : '用户编号'
-				},
-				{
-					field : 'userName', 
-					title : '用户姓名'
-				},
-				{
-					field : 'userPhone', 
-					title : '用户手机'
-				},
-				{
-					field : 'userEmail', 
-					title : '用户邮箱'
-				},
-				{
-				    field : 'userBalance',
-				    title : '用户余额'
-				},
-				{
-                    field: 'status',
-                    title: '用户状态',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                    	return $.table.selectDictLabel(datas, value);
+        function demoTablePage() {
+            return {
+                users: [[${users}]],
+                selectedUsers: [],
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedUsers = this.users.map(u => u.userId);
+                    } else {
+                        this.selectedUsers = [];
                     }
                 },
-		        {
-		            title: '操作',
-		            align: 'center',
-		            formatter: function(value, row, index) {
-		            	var actions = [];
-		            	actions.push('<a class="btn btn-success btn-xs" href="javascript:;"><i class="fa fa-edit"></i>编辑</a> ');
-                        actions.push('<a class="btn btn-danger btn-xs" href="javascript:;"><i class="fa fa-remove"></i>删除</a>');
-						return actions.join('');
-		            }
-		        }]
-            };
-            $.table.init(options);
-        });
+                
+                editUser(userId) {
+                    alert('编辑用户: ' + userId);
+                },
+                
+                deleteUser(userId) {
+                    if (confirm('确认要删除该用户吗？')) {
+                        this.users = this.users.filter(u => u.userId !== userId);
+                        alert('删除成功');
+                    }
+                }
+            }
+        }
     </script>
+    
+    <th:block th:include="include :: footer" />
 </body>
 </html>

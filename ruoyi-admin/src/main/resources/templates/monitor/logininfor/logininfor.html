@@ -1,146 +1,363 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro" x-data="logininforPage()">
 <head>
-	<th:block th:include="include :: header('登录日志列表')" />
+    <th:block th:include="include :: header('登录日志列表')" />
 </head>
-<body class="gray-bg">
-	<div class="container-div">
-		<div class="row">
-			<div class="col-sm-12 search-collapse">
-				<form id="logininfor-form">
-					<div class="select-list">
-						<ul>
-							<li>
-								<label>登录地址：</label><input type="text" name="ipaddr"/>
-							</li>
-							<li>
-								<label>登录名称：</label><input type="text" name="loginName"/>
-							</li>
-							<li>
-								<label>登录状态：</label><select name="status" th:with="type=${@dict.getType('sys_common_status')}">
-									<option value="">所有</option>
-									<option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}"></option>
-								</select>
-							</li>
-							<li class="select-time">
-								<label>登录时间： </label>
-								<input type="text" class="time-input" id="startTime" placeholder="开始时间"/>
-								<span>-</span>
-								<input type="text" class="time-input" id="endTime" placeholder="结束时间"/>
-							</li>
-							<li>
-								<a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-								<a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-							</li>
-						</ul>
-					</div>
-				</form>
-			</div>
-			
-			<div class="btn-group-sm" id="toolbar" role="group">
-				<a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="monitor:logininfor:remove">
-		            <i class="fa fa-remove"></i> 删除
-		        </a>
-		        <a class="btn btn-danger" onclick="$.operate.clean()" shiro:hasPermission="monitor:logininfor:remove">
-	                <i class="fa fa-trash"></i> 清空
-	            </a>
-	            <a class="btn btn-primary single disabled" onclick="unlock()" shiro:hasPermission="monitor:logininfor:unlock">
-					<i class="fa fa-unlock"></i> 解锁
-				</a>
-	            <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="monitor:logininfor:export">
-		            <i class="fa fa-download"></i> 导出
-		        </a>
-	        </div>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- 搜索栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <form id="logininfor-form" class="flex flex-wrap gap-4 items-end">
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录地址：</label>
+                    <input type="text" name="ipaddr" x-model="searchParams.ipaddr"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录名称：</label>
+                    <input type="text" name="loginName" x-model="searchParams.loginName"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录状态：</label>
+                    <select name="status" x-model="searchParams.status"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">所有</option>
+                        <option value="0">成功</option>
+                        <option value="1">失败</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">登录时间：</label>
+                    <input type="date" id="startTime" x-model="searchParams.beginTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-gray-500">-</span>
+                    <input type="date" id="endTime" x-model="searchParams.endTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" @click="searchLogininfor()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <i class="fa fa-search"></i>
+                        搜索
+                    </button>
+                    <button type="button" @click="resetSearch()"
+                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+                        <i class="fa fa-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </form>
+        </div>
         
-	        <div class="col-sm-12 select-table table-striped">
-			    <table id="bootstrap-table"></table>
-			</div>
-		</div>
-	</div>
-	
-	<th:block th:include="include :: footer" />
-	<script th:inline="javascript">
-	    var datas = [[${@dict.getType('sys_common_status')}]];
-		var prefix = ctx + "monitor/logininfor";
-	
-		$(function() {
-		    var options = {
-		        url: prefix + "/list",
-		        cleanUrl: prefix + "/clean",
-		        removeUrl: prefix + "/remove",
-		        exportUrl: prefix + "/export",
-		        queryParams: queryParams,
-		        sortName: "loginTime",
-		        sortOrder: "desc",
-		        modalName: "登录日志",
-		        escape: true,
-		        showPageGo: true,
-		        rememberSelected: true,
-		        columns: [{
-		        	field: 'state',
-		            checkbox: true
-		        },
-		        {
-		            field: 'infoId',
-		            title: '访问编号'
-		        },
-		        {
-		            field: 'loginName',
-		            title: '登录名称',
-		            sortable: true
-		        },
-		        {
-		            field: 'ipaddr',
-		            title: '登录地址',
-		            formatter: function(value, row, index) {
-                    	return $.table.tooltip(value);
+        <!-- 工具栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 flex flex-wrap gap-2">
+            <a shiro:hasPermission="monitor:logininfor:remove"
+               @click="deleteLogininfors()"
+               :class="{'opacity-50 cursor-not-allowed': selectedIds.length === 0}"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-remove"></i>
+                删除
+            </a>
+            
+            <a shiro:hasPermission="monitor:logininfor:remove"
+               @click="cleanLogininfor()"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-trash"></i>
+                清空
+            </a>
+            
+            <a shiro:hasPermission="monitor:logininfor:unlock"
+               @click="unlockUser()"
+               :class="{'opacity-50 cursor-not-allowed': selectedIds.length === 0}"
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-unlock"></i>
+                解锁
+            </a>
+            
+            <a shiro:hasPermission="monitor:logininfor:export"
+               @click="exportLogininfor()"
+               class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-download"></i>
+                导出
+            </a>
+        </div>
+        
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left w-12">
+                            <input type="checkbox" @change="toggleSelectAll($event)"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">访问编号</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录名称</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录地址</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录地点</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">浏览器</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">操作系统</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">登录状态</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">操作信息</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">登录时间</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr x-show="loading" colspan="10">
+                        <td colspan="10" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>加载中...</p>
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && logininfors.length === 0" colspan="10">
+                        <td colspan="10" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无数据</p>
+                        </td>
+                    </tr>
+                    <template x-for="logininfor in logininfors" :key="logininfor.infoId">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" 
+                                       :value="logininfor.infoId" 
+                                       x-model="selectedIds"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.infoId"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.loginName"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.ipaddr"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.loginLocation"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.browser"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.os"></td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 text-xs rounded" 
+                                      :class="logininfor.status == '0' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                      x-text="logininfor.status == '0' ? '成功' : '失败'"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.msg"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="logininfor.loginTime"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                显示 <span x-text="startIndex"></span> - <span x-text="endIndex"></span> 条，共 <span x-text="total"></span> 条
+            </div>
+            <div class="flex gap-2">
+                <button @click="prevPage()" 
+                        :disabled="pageNum <= 1"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+                <button x-for="p in visiblePages" 
+                        :key="p"
+                        @click="goToPage(p)"
+                        :class="{'bg-blue-600 text-white': p === pageNum, 'bg-white text-gray-700 hover:bg-gray-50': p !== pageNum}"
+                        class="px-3 py-1 border border-gray-300 rounded">
+                    <span x-text="p"></span>
+                </button>
+                <button @click="nextPage()" 
+                        :disabled="pageNum >= totalPages"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var prefix = ctx + "monitor/logininfor";
+        
+        function logininforPage() {
+            return {
+                loading: false,
+                logininfors: [],
+                selectedIds: [],
+                searchParams: {
+                    ipaddr: '',
+                    loginName: '',
+                    status: '',
+                    beginTime: '',
+                    endTime: ''
+                },
+                pageNum: 1,
+                pageSize: 10,
+                total: 0,
+                
+                init() {
+                    this.loadLogininfors();
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.total / this.pageSize);
+                },
+                
+                get visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pageNum - 2);
+                    const end = Math.min(this.totalPages, this.pageNum + 2);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
                     }
-		        },
-		        {
-		            field: 'loginLocation',
-		            title: '登录地点'
-		        },
-		        {
-		            field: 'browser',
-		            title: '浏览器'
-		        },
-		        {
-		            field: 'os',
-		            title: '操作系统'
-		        },
-		        {
-		            field: 'status',
-		            title: '登录状态',
-		            align: 'center',
-		            formatter: function(value, row, index) {
-		            	return $.table.selectDictLabel(datas, value);
-		            }
-		        },
-		        {
-		            field: 'msg',
-		            title: '操作信息'
-		        },
-		        {
-		            field: 'loginTime',
-		            title: '登录时间',
-		            sortable: true
-		        }]
-		    };
-		    $.table.init(options);
-		});
-		
-		function queryParams(params) {
-			var search = $.table.queryParams(params);
-			search.params = {
-			    beginTime : beginOfTime($("#startTime").val()),
-			    endTime : endOfTime($("#endTime").val())
-			};
-			return search;
-		}
-		
-		function unlock() {
-            $.operate.post(prefix + "/unlock?loginName=" + $.table.selectColumns("loginName"));
+                    return pages;
+                },
+                
+                get startIndex() {
+                    return Math.min((this.pageNum - 1) * this.pageSize + 1, this.total);
+                },
+                
+                get endIndex() {
+                    return Math.min(this.pageNum * this.pageSize, this.total);
+                },
+                
+                async loadLogininfors() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        Object.keys(this.searchParams).forEach(key => {
+                            if (this.searchParams[key]) {
+                                params.append(key, this.searchParams[key]);
+                            }
+                        });
+                        params.append('pageNum', this.pageNum);
+                        params.append('pageSize', this.pageSize);
+                        
+                        const response = await fetch(prefix + '/list?' + params.toString());
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            this.logininfors = data.rows || [];
+                            this.total = data.total || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载登录日志失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedIds = this.logininfors.map(l => l.infoId);
+                    } else {
+                        this.selectedIds = [];
+                    }
+                },
+                
+                searchLogininfor() {
+                    this.pageNum = 1;
+                    this.loadLogininfors();
+                },
+                
+                resetSearch() {
+                    this.searchParams = {
+                        ipaddr: '',
+                        loginName: '',
+                        status: '',
+                        beginTime: '',
+                        endTime: ''
+                    };
+                    this.pageNum = 1;
+                    this.loadLogininfors();
+                },
+                
+                deleteLogininfors() {
+                    if (this.selectedIds.length === 0) {
+                        alert('请选择要删除的记录');
+                        return;
+                    }
+                    if (confirm(`确认要删除选中的 ${this.selectedIds.length} 条记录吗？`)) {
+                        fetch(prefix + '/remove', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + this.selectedIds.join(',')
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('删除成功');
+                                this.selectedIds = [];
+                                this.loadLogininfors();
+                            } else {
+                                alert(data.msg || '删除失败');
+                            }
+                        });
+                    }
+                },
+                
+                cleanLogininfor() {
+                    if (confirm('确认要清空所有登录日志吗？')) {
+                        fetch(prefix + '/clean', { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.code === 0) {
+                                    alert('清空成功');
+                                    this.loadLogininfors();
+                                } else {
+                                    alert(data.msg || '清空失败');
+                                }
+                            });
+                    }
+                },
+                
+                unlockUser() {
+                    if (this.selectedIds.length === 0) {
+                        alert('请选择要解锁的用户');
+                        return;
+                    }
+                    const loginNames = this.logininfors.filter(l => this.selectedIds.includes(l.infoId)).map(l => l.loginName);
+                    fetch(prefix + '/unlock?loginName=' + loginNames.join(','))
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('解锁成功');
+                                this.selectedIds = [];
+                            } else {
+                                alert(data.msg || '解锁失败');
+                            }
+                        });
+                },
+                
+                exportLogininfor() {
+                    const params = new URLSearchParams();
+                    Object.keys(this.searchParams).forEach(key => {
+                        if (this.searchParams[key]) {
+                            params.append(key, this.searchParams[key]);
+                        }
+                    });
+                    window.location.href = prefix + '/export?' + params.toString();
+                },
+                
+                prevPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        this.loadLogininfors();
+                    }
+                },
+                
+                nextPage() {
+                    if (this.pageNum < this.totalPages) {
+                        this.pageNum++;
+                        this.loadLogininfors();
+                    }
+                },
+                
+                goToPage(page) {
+                    this.pageNum = page;
+                    this.loadLogininfors();
+                }
+            }
         }
-	</script>
+    </script>
+    
+    <th:block th:include="include :: footer" />
 </body>
 </html>

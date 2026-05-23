@@ -1,115 +1,147 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" x-data="authRolePage()">
 <head>
-	<th:block th:include="include :: header('用户分配角色')" />
+    <th:block th:include="include :: header('用户分配角色')" />
 </head>
-<body>
-    <div class="main-content">
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
         <form id="form-user-add" class="form-horizontal">
             <input type="hidden" id="userId" name="userId" th:value="${user.userId}">
-            <h4 class="form-header h4">基本信息</h4>
-            <div class="row">
-            	<div class="col-sm-6">
-                    <div class="form-group">
-                        <label class="col-sm-4 control-label is-required">用户名称：</label>
-                        <div class="col-sm-8">
-                            <input name="userName" class="form-control" type="text" disabled th:value="${user.userName}">
+            
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-4">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h5 class="font-semibold text-gray-800">基本信息</h5>
+                </div>
+                <div class="p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-700">用户名称：</label>
+                            <input name="userName" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                                   type="text" disabled th:value="${user.userName}">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-700">登录账号：</label>
+                            <input name="loginName" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                                   type="text" disabled th:value="${user.loginName}">
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6">
-                    <div class="form-group">
-                        <label class="col-sm-4 control-label is-required">登录账号：</label>
-                        <div class="col-sm-8">
-                            <input name="loginName" class="form-control" type="text" disabled th:value="${user.loginName}">
-                        </div>
-                    </div>
-                </div> 
             </div>
-           
-            <h4 class="form-header h4">分配角色</h4>
-            <div class="row">
-                <div class="col-sm-12">
-                    <div class="col-sm-12 select-table table-striped">
-					    <table id="bootstrap-table"></table>
-					</div>
+            
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h5 class="font-semibold text-gray-800">分配角色</h5>
                 </div>
+                
+                <div class="p-4">
+                    <div class="text-sm text-gray-600 mb-4">
+                        已选择 <span class="text-blue-600 font-medium" x-text="selectedRoles.length"></span> 个角色
+                    </div>
+                    
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-4 py-3 text-left w-12">
+                                    <input type="checkbox" @change="toggleSelectAll($event)"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">角色编号</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">角色名称</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">权限字符</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr x-show="roles.length === 0">
+                                <td colspan="5" class="px-4 py-12 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                                    <p>暂无角色数据</p>
+                                </td>
+                            </tr>
+                            <template x-for="role in roles" :key="role.roleId">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" 
+                                               :value="role.roleId" 
+                                               x-model="selectedRoles"
+                                               :disabled="role.status == '1'"
+                                               :class="{'opacity-50 cursor-not-allowed': role.status == '1'}"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="role.roleId"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-800 font-medium" x-text="role.roleName"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="role.roleKey"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="role.createTime"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-center gap-4">
+                <button type="button" @click="submitHandler()"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fa fa-check"></i>
+                    保 存
+                </button>
+                <button type="button" @click="closeItem()"
+                        class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fa fa-reply-all"></i>
+                    关 闭
+                </button>
             </div>
         </form>
     </div>
-      
-    <div class="row">
-        <div class="col-sm-offset-5 col-sm-10">
-            <button type="button" class="btn btn-sm btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i>保 存</button>&nbsp;
-            <button type="button" class="btn btn-sm btn-danger" onclick="closeItem()"><i class="fa fa-reply-all"></i>关 闭 </button>
-        </div>
-    </div>
-	<th:block th:include="include :: footer" />
-	<script th:inline="javascript">
-	    var prefix = ctx + "system/user/authRole";
-	    var roles = [[${roles}]]
-	    
-	    $(function() {
-		    var options = {
-		        data: roles,
-		        sidePagination: "client",
-		        sortName: "roleSort",
-		        showSearch: false,
-                showRefresh: false,
-                showToggle: false,
-                showColumns: false,
-                clickToSelect: true,
-                maintainSelected: true,
-		        columns: [{
-		            checkbox: true,
-		            formatter:function (value, row, index) {
-		                var state = row.status == '1' ? true : false;
-		                if ($.common.isEmpty(value)) {
-		                    return { checked: row.flag, disabled: state };
-		                } else {
-		                    return { checked: value, disabled: state };
-		                }
-		            }
-		        },
-		        {
-		            field: 'roleId',
-		            title: '角色编号'
-		        },
-		        {
-		            field: 'roleSort',
-		            title: '排序',
-		            sortable: true,
-		            visible: false
-		        },
-		        {
-		            field: 'roleName',
-		            title: '角色名称'
-		        },
-		        {
-		            field: 'roleKey',
-		            title: '权限字符',
-		            sortable: true
-		        },
-		        {
-		            field: 'createTime',
-		            title: '创建时间',
-		            sortable: true
-		        }]
-		    };
-		    $.table.init(options);
-		});
-	    
-	    /* 添加角色-提交 */
-        function submitHandler(index, layero){
-            var roleIds = [];
-        	var data = $('#bootstrap-table').bootstrapTable('getData');
-        	for (var i = 0; i < data.length; i++) {
-        		if (data[i][0] || ($.common.isEmpty(data[i][0]) && data[i].flag)) {
-        		    roleIds.push(data[i].roleId)
-        		}
-			}
-        	$.operate.saveTab(prefix + "/insertAuthRole", { "userId": $("#userId").val(), "roleIds": roleIds.join() });
+    
+    <script th:inline="javascript">
+        var prefix = ctx + "system/user/authRole";
+        var roles = [[${roles}]];
+        var userId = [[${user.userId}]];
+        
+        function authRolePage() {
+            return {
+                roles: roles || [],
+                selectedRoles: [],
+                
+                init() {
+                    this.selectedRoles = this.roles.filter(r => r.flag).map(r => r.roleId);
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedRoles = this.roles.filter(r => r.status != '1').map(r => r.roleId);
+                    } else {
+                        this.selectedRoles = [];
+                    }
+                },
+                
+                submitHandler() {
+                    const roleIds = this.selectedRoles.join();
+                    
+                    fetch(prefix + '/insertAuthRole', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'userId=' + userId + '&roleIds=' + roleIds
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.code === 0) {
+                            alert('保存成功');
+                            window.close();
+                        } else {
+                            alert(data.msg || '保存失败');
+                        }
+                    });
+                },
+                
+                closeItem() {
+                    window.close();
+                }
+            }
         }
     </script>
+    
+    <th:block th:include="include :: footer" />
 </body>
 </html>

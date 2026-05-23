@@ -1,194 +1,453 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro" x-data="rolePage()">
 <head>
-	<th:block th:include="include :: header('角色列表')" />
+    <th:block th:include="include :: header('角色列表')" />
 </head>
-<body class="gray-bg">
-	<div class="container-div">
-		<div class="row">
-			<div class="col-sm-12 search-collapse">
-				<form id="role-form">
-					<div class="select-list">
-						<ul>
-							<li>
-								角色名称：<input type="text" name="roleName"/>
-							</li>
-							<li>
-								权限字符：<input type="text" name="roleKey"/>
-							</li>
-							<li>
-								角色状态：<select name="status" th:with="type=${@dict.getType('sys_normal_disable')}">
-									<option value="">所有</option>
-									<option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}"></option>
-								</select>
-							</li>
-							<li class="select-time">
-								<label>创建时间： </label>
-								<input type="text" class="time-input" id="startTime" placeholder="开始时间" name="params[beginTime]"/>
-								<span>-</span>
-								<input type="text" class="time-input" id="endTime" placeholder="结束时间" name="params[endTime]"/>
-							</li>
-							<li>
-								<a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-							    <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-							</li>
-						</ul>
-					</div>
-				</form>
-			</div>
-		
-			<div class="btn-group-sm" id="toolbar" role="group">
-				<a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="system:role:add">
-	                <i class="fa fa-plus"></i> 新增
-	            </a>
-	            <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="system:role:edit">
-		            <i class="fa fa-edit"></i> 修改
-		        </a>
-				<a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="system:role:remove">
-		            <i class="fa fa-remove"></i> 删除
-		        </a>
-		        <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="system:role:export">
-		            <i class="fa fa-download"></i> 导出
-		        </a>
-	        </div>
-	        
-	        <div class="col-sm-12 select-table table-striped">
-			    <table id="bootstrap-table"></table>
-			</div>
-		</div>
-	</div>
-	<th:block th:include="include :: footer" />
-	<script th:inline="javascript">
-		var editFlag = [[${@permission.hasPermi('system:role:edit')}]];
-		var removeFlag = [[${@permission.hasPermi('system:role:remove')}]];
-		var prefix = ctx + "system/role";
-		
-
-		$(function() {
-		    var options = {
-		        url: prefix + "/list",
-		        createUrl: prefix + "/add",
-		        updateUrl: prefix + "/edit/{id}",
-		        removeUrl: prefix + "/remove",
-		        exportUrl: prefix + "/export",
-		        viewUrl: prefix + "/view/{id}",
-		        sortName: "roleSort",
-		        modalName: "角色",
-		        columns: [{
-		            checkbox: true
-		        },
-		        {
-		            field: 'roleId',
-		            title: '角色编号'
-		        },
-		        {
-		            field: 'roleName',
-		            title: '角色名称',
-		            sortable: true,
-		            formatter: function(value, row, index) {
-		                return '<a href="javascript:void(0)" onclick="$.operate.view(\'' + row.roleId + '\')">' + value + '</a>';
-		            }
-		        },
-		        {
-		            field: 'roleKey',
-		            title: '权限字符',
-		            sortable: true
-		        },
-		        {
-		            field: 'dataScope',
-		            title: '数据权限',
-		            formatter: function(value, item, index) {
-		                if (item.dataScope == '1') {
-		                    return '<span class="badge badge-primary">全部数据权限</span>';
-		                }
-		                else if (item.dataScope == '2') {
-		                    return '<span class="badge badge-success">自定义数据权限</span>';
-		                }
-		                else if (item.dataScope == '3') {
-		                    return '<span class="badge badge-info">本部门数据权限</span>';
-		                }
-		                else if (item.dataScope == '4') {
-		                    return '<span class="badge badge-warning">本部门及以下数据权限</span>';
-		                }
-		                else if (item.dataScope == '5') {
-		                    return '<span class="badge badge-danger">仅本人数据权限</span>';
-		                }
-		            }
-		        },
-		        {
-		            field: 'roleSort',
-		            title: '显示顺序',
-		            sortable: true
-		        },
-		        {
-		        	visible: editFlag == 'hidden' ? false : true,
-		        	title: '角色状态',
-		        	align: 'center',
-		        	formatter: function (value, row, index) {
-		        		return statusTools(row);
-		        	}
-		        },
-		        {
-		            field: 'createTime',
-		            title: '创建时间',
-		            sortable: true
-		        },
-		        {
-		            title: '操作',
-		            align: 'center',
-		            formatter: function(value, row, index) {
-		            	if (row.roleId != 1) {
-		                    var actions = [];
-		                    actions.push('<a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.roleId + '\')"><i class="fa fa-edit"></i>编辑</a> ');
-		                    actions.push('<a class="btn btn-danger btn-xs ' + removeFlag + '" href="javascript:void(0)" onclick="$.operate.remove(\'' + row.roleId + '\')"><i class="fa fa-remove"></i>删除</a> ');
-		                    var more = [];
-		                    more.push("<a class='btn btn-default btn-xs " + editFlag + "' href='javascript:void(0)' onclick='authDataScope(" + row.roleId + ")'><i class='fa fa-check-square-o'></i>数据权限</a> ");
-		                    more.push("<a class='btn btn-default btn-xs " + editFlag + "' href='javascript:void(0)' onclick='authUser(" + row.roleId + ")'><i class='fa fa-user'></i>分配用户</a>");
-		                    actions.push('<a tabindex="0" class="btn btn-info btn-xs" role="button" data-container="body" data-placement="left" data-toggle="popover" data-html="true" data-trigger="hover" data-content="' + more.join('') + '"><i class="fa fa-chevron-circle-right"></i>更多操作</a>');
-		                    return actions.join('');
-		            	} else {
-		                    return "";
-		                }
-		            }
-		        }]
-		    };
-		    $.table.init(options);
-		});
-		
-		/* 角色管理-分配数据权限 */
-		function authDataScope(roleId) {
-		    var url = prefix + '/authDataScope/' + roleId;
-		    $.modal.open("分配数据权限", url);
-		}
-		
-		/* 角色管理-分配用户 */
-		function authUser(roleId) {
-		    var url = prefix + '/authUser/' + roleId;
-		    $.modal.openTab("分配用户", url);
-		}
-		
-		/* 角色状态显示 */
-		function statusTools(row) {
-		    if (row.status == 1) {
-    			return '<i class=\"fa fa-toggle-off text-info fa-2x\" onclick="enable(\'' + row.roleId + '\')"></i> ';
-    		} else {
-    			return '<i class=\"fa fa-toggle-on text-info fa-2x\" onclick="disable(\'' + row.roleId + '\')"></i> ';
-    		}
-		}
-		
-		/* 角色管理-停用 */
-		function disable(roleId) {
-			$.modal.confirm("确认要停用角色吗？", function() {
-				$.operate.post(prefix + "/changeStatus", { "roleId": roleId, "status": 1 });
-		    })
-		}
-
-		/* 角色管理启用 */
-		function enable(roleId) {
-			$.modal.confirm("确认要启用角色吗？", function() {
-				$.operate.post(prefix + "/changeStatus", { "roleId": roleId, "status": 0 });
-		    })
-		}
-	</script>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- 搜索栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <form id="role-form" class="flex flex-wrap gap-4 items-end">
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">角色名称：</label>
+                    <input type="text" name="roleName" x-model="searchParams.roleName"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">权限字符：</label>
+                    <input type="text" name="roleKey" x-model="searchParams.roleKey"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">角色状态：</label>
+                    <select name="status" x-model="searchParams.status"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">所有</option>
+                        <option value="0">正常</option>
+                        <option value="1">停用</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">创建时间：</label>
+                    <input type="date" id="startTime" x-model="searchParams.beginTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-gray-500">-</span>
+                    <input type="date" id="endTime" x-model="searchParams.endTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" @click="searchRoles()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <i class="fa fa-search"></i>
+                        搜索
+                    </button>
+                    <button type="button" @click="resetSearch()"
+                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+                        <i class="fa fa-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 工具栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 flex flex-wrap gap-2">
+            <a shiro:hasPermission="system:role:add"
+               @click="addRole()"
+               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-plus"></i>
+                新增
+            </a>
+            
+            <a shiro:hasPermission="system:role:edit"
+               @click="editRole()"
+               :class="{'opacity-50 cursor-not-allowed': selectedRoles.length === 0}"
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-edit"></i>
+                修改
+            </a>
+            
+            <a shiro:hasPermission="system:role:remove"
+               @click="deleteRoles()"
+               :class="{'opacity-50 cursor-not-allowed': selectedRoles.length === 0}"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-remove"></i>
+                删除
+            </a>
+            
+            <a shiro:hasPermission="system:role:export"
+               @click="exportRoles()"
+               class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-download"></i>
+                导出
+            </a>
+        </div>
+        
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left">
+                            <input type="checkbox" @change="toggleSelectAll($event)"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">角色编号</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">角色名称</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">权限字符</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">数据权限</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">显示顺序</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">角色状态</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">创建时间</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr x-show="loading" colspan="9">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>加载中...</p>
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && roles.length === 0" colspan="9">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无数据</p>
+                        </td>
+                    </tr>
+                    <template x-for="role in roles" :key="role.roleId">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" 
+                                       :value="role.roleId" 
+                                       x-model="selectedRoles"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="role.roleId"></td>
+                            <td class="px-4 py-3 text-sm">
+                                <a @click="viewRole(role.roleId)" 
+                                   class="text-blue-600 hover:text-blue-800 cursor-pointer"
+                                   x-text="role.roleName"></a>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="role.roleKey"></td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="px-2 py-1 text-xs rounded" 
+                                      :class="{
+                                          'bg-blue-100 text-blue-800': role.dataScope == '1',
+                                          'bg-green-100 text-green-800': role.dataScope == '2',
+                                          'bg-cyan-100 text-cyan-800': role.dataScope == '3',
+                                          'bg-yellow-100 text-yellow-800': role.dataScope == '4',
+                                          'bg-red-100 text-red-800': role.dataScope == '5'
+                                      }"
+                                      x-text="getDataScopeText(role.dataScope)"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="role.roleSort"></td>
+                            <td class="px-4 py-3 text-center">
+                                <i :class="role.status == 1 ? 'fa fa-toggle-off text-gray-400' : 'fa fa-toggle-on text-green-600'"
+                                   class="fa-2x cursor-pointer"
+                                   @click="toggleRoleStatus(role)"></i>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="role.createTime"></td>
+                            <td class="px-4 py-3 text-center text-sm">
+                                <template x-if="role.roleId != 1">
+                                    <div class="flex justify-center gap-2">
+                                        <button @click="editRole(role.roleId)"
+                                                shiro:hasPermission="system:role:edit"
+                                                class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                                            <i class="fa fa-edit mr-1"></i>编辑
+                                        </button>
+                                        <button @click="deleteRole(role.roleId)"
+                                                shiro:hasPermission="system:role:remove"
+                                                class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+                                            <i class="fa fa-remove mr-1"></i>删除
+                                        </button>
+                                        <div class="relative inline-block" x-data="{ showMore: false }">
+                                            <button @click="showMore = !showMore"
+                                                    class="px-2 py-1 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-700">
+                                                <i class="fa fa-chevron-circle-right mr-1"></i>更多
+                                            </button>
+                                            <div x-show="showMore" 
+                                                 @click.outside="showMore = false"
+                                                 class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                                <button shiro:hasPermission="system:role:edit"
+                                                        @click="authDataScope(role.roleId)"
+                                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    <i class="fa fa-check-square-o mr-2"></i>数据权限
+                                                </button>
+                                                <button shiro:hasPermission="system:role:edit"
+                                                        @click="authUser(role.roleId)"
+                                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    <i class="fa fa-user mr-2"></i>分配用户
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                显示 <span x-text="startIndex"></span> - <span x-text="endIndex"></span> 条，共 <span x-text="total"></span> 条
+            </div>
+            <div class="flex gap-2">
+                <button @click="prevPage()" 
+                        :disabled="pageNum <= 1"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+                <button x-for="p in visiblePages" 
+                        :key="p"
+                        @click="goToPage(p)"
+                        :class="{'bg-blue-600 text-white': p === pageNum, 'bg-white text-gray-700 hover:bg-gray-50': p !== pageNum}"
+                        class="px-3 py-1 border border-gray-300 rounded">
+                    <span x-text="p"></span>
+                </button>
+                <button @click="nextPage()" 
+                        :disabled="pageNum >= totalPages"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var editFlag = [[${@permission.hasPermi('system:role:edit')}]];
+        var removeFlag = [[${@permission.hasPermi('system:role:remove')}]];
+        var prefix = ctx + "system/role";
+        
+        function rolePage() {
+            return {
+                loading: false,
+                roles: [],
+                selectedRoles: [],
+                searchParams: {
+                    roleName: '',
+                    roleKey: '',
+                    status: '',
+                    beginTime: '',
+                    endTime: ''
+                },
+                pageNum: 1,
+                pageSize: 10,
+                total: 0,
+                
+                init() {
+                    this.loadRoles();
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.total / this.pageSize);
+                },
+                
+                get visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pageNum - 2);
+                    const end = Math.min(this.totalPages, this.pageNum + 2);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                },
+                
+                get startIndex() {
+                    return Math.min((this.pageNum - 1) * this.pageSize + 1, this.total);
+                },
+                
+                get endIndex() {
+                    return Math.min(this.pageNum * this.pageSize, this.total);
+                },
+                
+                getDataScopeText(scope) {
+                    const scopeMap = {
+                        '1': '全部数据权限',
+                        '2': '自定义数据权限',
+                        '3': '本部门数据权限',
+                        '4': '本部门及以下数据权限',
+                        '5': '仅本人数据权限'
+                    };
+                    return scopeMap[scope] || '-';
+                },
+                
+                async loadRoles() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        Object.keys(this.searchParams).forEach(key => {
+                            if (this.searchParams[key]) {
+                                params.append(key, this.searchParams[key]);
+                            }
+                        });
+                        params.append('pageNum', this.pageNum);
+                        params.append('pageSize', this.pageSize);
+                        
+                        const response = await fetch(prefix + '/list?' + params.toString());
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            this.roles = data.rows || [];
+                            this.total = data.total || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载角色列表失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedRoles = this.roles.map(r => r.roleId);
+                    } else {
+                        this.selectedRoles = [];
+                    }
+                },
+                
+                searchRoles() {
+                    this.pageNum = 1;
+                    this.loadRoles();
+                },
+                
+                resetSearch() {
+                    this.searchParams = {
+                        roleName: '',
+                        roleKey: '',
+                        status: '',
+                        beginTime: '',
+                        endTime: ''
+                    };
+                    this.pageNum = 1;
+                    this.loadRoles();
+                },
+                
+                addRole() {
+                    window.location.href = prefix + '/add';
+                },
+                
+                editRole(roleId) {
+                    if (!roleId && this.selectedRoles.length !== 1) {
+                        alert('请选择一条记录进行编辑');
+                        return;
+                    }
+                    const id = roleId || this.selectedRoles[0];
+                    window.location.href = prefix + '/edit/' + id;
+                },
+                
+                viewRole(roleId) {
+                    window.location.href = prefix + '/view/' + roleId;
+                },
+                
+                deleteRole(roleId) {
+                    if (confirm('确认要删除该角色吗？')) {
+                        fetch(prefix + '/remove/' + roleId, { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.code === 0) {
+                                    alert('删除成功');
+                                    this.loadRoles();
+                                } else {
+                                    alert(data.msg || '删除失败');
+                                }
+                            });
+                    }
+                },
+                
+                deleteRoles() {
+                    if (this.selectedRoles.length === 0) {
+                        alert('请选择要删除的角色');
+                        return;
+                    }
+                    if (confirm(`确认要删除选中的 ${this.selectedRoles.length} 个角色吗？`)) {
+                        fetch(prefix + '/remove', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + this.selectedRoles.join(',')
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('删除成功');
+                                this.selectedRoles = [];
+                                this.loadRoles();
+                            } else {
+                                alert(data.msg || '删除失败');
+                            }
+                        });
+                    }
+                },
+                
+                async toggleRoleStatus(role) {
+                    const newStatus = role.status == 1 ? 0 : 1;
+                    const message = newStatus == 1 ? '确认要停用角色吗？' : '确认要启用角色吗？';
+                    
+                    if (confirm(message)) {
+                        try {
+                            const response = await fetch(prefix + '/changeStatus', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'roleId=' + role.roleId + '&status=' + newStatus
+                            });
+                            const data = await response.json();
+                            if (data.code === 0) {
+                                role.status = newStatus;
+                            } else {
+                                alert(data.msg || '操作失败');
+                            }
+                        } catch (error) {
+                            alert('操作失败');
+                        }
+                    }
+                },
+                
+                authDataScope(roleId) {
+                    window.location.href = prefix + '/authDataScope/' + roleId;
+                },
+                
+                authUser(roleId) {
+                    window.location.href = prefix + '/authUser/' + roleId;
+                },
+                
+                exportRoles() {
+                    const params = new URLSearchParams();
+                    Object.keys(this.searchParams).forEach(key => {
+                        if (this.searchParams[key]) {
+                            params.append(key, this.searchParams[key]);
+                        }
+                    });
+                    window.location.href = prefix + '/export?' + params.toString();
+                },
+                
+                prevPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        this.loadRoles();
+                    }
+                },
+                
+                nextPage() {
+                    if (this.pageNum < this.totalPages) {
+                        this.pageNum++;
+                        this.loadRoles();
+                    }
+                },
+                
+                goToPage(page) {
+                    this.pageNum = page;
+                    this.loadRoles();
+                }
+            }
+        }
+    </script>
+    
+    <th:block th:include="include :: footer" />
 </body>
 </html>

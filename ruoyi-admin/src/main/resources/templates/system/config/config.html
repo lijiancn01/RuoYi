@@ -1,148 +1,390 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro" x-data="configPage()">
 <head>
-	<th:block th:include="include :: header('参数列表')" />
+    <th:block th:include="include :: header('参数列表')" />
 </head>
-<body class="gray-bg">
-     <div class="container-div">
-		<div class="row">
-			<div class="col-sm-12 search-collapse">
-				<form id="config-form">
-					<div class="select-list">
-						<ul>
-							<li>
-								参数名称：<input type="text" name="configName"/>
-							</li>
-							<li>
-								参数键名：<input type="text" name="configKey"/>
-							</li>
-							<li>
-								系统内置：<select name="configType" th:with="type=${@dict.getType('sys_yes_no')}">
-									<option value="">所有</option>
-									<option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}"></option>
-								</select>
-							</li>
-							<li class="select-time">
-								<label>创建时间： </label>
-								<input type="text" class="time-input" id="startTime" placeholder="开始时间" name="params[beginTime]"/>
-								<span>-</span>
-								<input type="text" class="time-input" id="endTime" placeholder="结束时间" name="params[endTime]"/>
-							</li>
-							<li>
-								<a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-								<a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-							</li>
-						</ul>
-					</div>
-				</form>
-			</div>
-			
-	        <div class="btn-group-sm" id="toolbar" role="group">
-		        <a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="system:config:add">
-		            <i class="fa fa-plus"></i> 新增
-		        </a>
-		        <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="system:config:edit">
-		            <i class="fa fa-edit"></i> 修改
-		        </a>
-		        <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="system:config:remove">
-		            <i class="fa fa-remove"></i> 删除
-		        </a>
-		        <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="system:config:export">
-		            <i class="fa fa-download"></i> 导出
-		        </a>
-		        <a class="btn btn-danger" onclick="refreshCache()" shiro:hasPermission="system:config:remove">
-		            <i class="fa fa-refresh"></i> 刷新缓存
-		        </a>
-	        </div>
-	        <div class="col-sm-12 select-table table-striped">
-	            <table id="bootstrap-table"></table>
-	        </div>
-	    </div>
-	</div>
-    <th:block th:include="include :: footer" />
-    <script th:inline="javascript">
-        var editFlag = [[${@permission.hasPermi('system:config:edit')}]];
-        var removeFlag = [[${@permission.hasPermi('system:config:remove')}]];
-        var datas = [[${@dict.getType('sys_yes_no')}]];
-        var prefix = ctx + "system/config";
-
-        $(function() {
-            var options = {
-                url: prefix + "/list",
-                createUrl: prefix + "/add",
-                updateUrl: prefix + "/edit/{id}",
-                removeUrl: prefix + "/remove",
-                exportUrl: prefix + "/export",
-                sortName: "configId",
-		        sortOrder: "asc",
-                modalName: "参数",
-                columns: [{
-                    checkbox: true
-                },
-                {
-                    field: 'configId',
-                    title: '参数主键'
-                },
-                {
-                    field: 'configName',
-                    title: '参数名称',
-                    formatter: function(value, row, index) {
-                        return $.table.tooltip(value);
-                    }
-                },
-                {
-                    field: 'configKey',
-                    title: '参数键名',
-                    formatter: function(value, row, index) {
-                        return $.table.tooltip(value);
-                    }
-                },
-                {
-                    field: 'configValue',
-                    title: '参数键值',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        return $.table.tooltip(value, 10, "open");
-                    }
-                },
-                {
-                    field: 'configType',
-                    title: '系统内置',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        return $.table.selectDictLabel(datas, value);
-                    }
-                },
-                {
-                    field: 'remark',
-                    title: '备注',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        return $.table.tooltip(value, 10, "open");
-                    }
-                },
-                {
-                    field: 'createTime',
-                    title: '创建时间'
-                },
-                {
-                    title: '操作',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        var actions = [];
-                        actions.push('<a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.configId + '\')"><i class="fa fa-edit"></i>编辑</a> ');
-                        actions.push('<a class="btn btn-danger btn-xs ' + removeFlag + '" href="javascript:void(0)" onclick="$.operate.remove(\'' + row.configId + '\')"><i class="fa fa-remove"></i>删除</a>');
-                        return actions.join('');
-                    }
-                }]
-            };
-            $.table.init(options);
-        });
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- 搜索栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <form id="config-form" class="flex flex-wrap gap-4 items-end">
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">参数名称：</label>
+                    <input type="text" name="configName" x-model="searchParams.configName"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">参数键名：</label>
+                    <input type="text" name="configKey" x-model="searchParams.configKey"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">系统内置：</label>
+                    <select name="configType" x-model="searchParams.configType"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">所有</option>
+                        <option value="Y">是</option>
+                        <option value="N">否</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-gray-700 font-medium">创建时间：</label>
+                    <input type="date" id="startTime" x-model="searchParams.beginTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-gray-500">-</span>
+                    <input type="date" id="endTime" x-model="searchParams.endTime"
+                           class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" @click="searchConfigs()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <i class="fa fa-search"></i>
+                        搜索
+                    </button>
+                    <button type="button" @click="resetSearch()"
+                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+                        <i class="fa fa-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </form>
+        </div>
         
-        /** 刷新参数缓存 */
-        function refreshCache() {
-            $.operate.get(prefix + "/refreshCache");
+        <!-- 工具栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 flex flex-wrap gap-2">
+            <a shiro:hasPermission="system:config:add"
+               @click="addConfig()"
+               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-plus"></i>
+                新增
+            </a>
+            
+            <a shiro:hasPermission="system:config:edit"
+               @click="editConfig()"
+               :class="{'opacity-50 cursor-not-allowed': selectedConfigs.length !== 1}"
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-edit"></i>
+                修改
+            </a>
+            
+            <a shiro:hasPermission="system:config:remove"
+               @click="deleteConfigs()"
+               :class="{'opacity-50 cursor-not-allowed': selectedConfigs.length === 0}"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-remove"></i>
+                删除
+            </a>
+            
+            <a shiro:hasPermission="system:config:export"
+               @click="exportConfigs()"
+               class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-download"></i>
+                导出
+            </a>
+            
+            <a shiro:hasPermission="system:config:remove"
+               @click="refreshCache()"
+               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 cursor-pointer">
+                <i class="fa fa-refresh"></i>
+                刷新缓存
+            </a>
+        </div>
+        
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left w-12">
+                            <input type="checkbox" @change="toggleSelectAll($event)"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">参数主键</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">参数名称</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">参数键名</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">参数键值</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">系统内置</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">备注</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">创建时间</th>
+                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr x-show="loading" colspan="9">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>加载中...</p>
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && configs.length === 0" colspan="9">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无数据</p>
+                        </td>
+                    </tr>
+                    <template x-for="config in configs" :key="config.configId">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" 
+                                       :value="config.configId" 
+                                       x-model="selectedConfigs"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.configId"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.configName"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.configKey"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.configValue"></td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 text-xs rounded" 
+                                      :class="config.configType == 'Y' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                      x-text="config.configType == 'Y' ? '是' : '否'"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.remark || '-'"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600" x-text="config.createTime"></td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex justify-center gap-1">
+                                    <button shiro:hasPermission="system:config:edit"
+                                            @click="editConfig(config.configId)"
+                                            class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">
+                                        <i class="fa fa-edit mr-1"></i>编辑
+                                    </button>
+                                    <button shiro:hasPermission="system:config:remove"
+                                            @click="deleteConfig(config.configId)"
+                                            class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700">
+                                        <i class="fa fa-remove mr-1"></i>删除
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                显示 <span x-text="startIndex"></span> - <span x-text="endIndex"></span> 条，共 <span x-text="total"></span> 条
+            </div>
+            <div class="flex gap-2">
+                <button @click="prevPage()" 
+                        :disabled="pageNum <= 1"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-left"></i>
+                </button>
+                <button x-for="p in visiblePages" 
+                        :key="p"
+                        @click="goToPage(p)"
+                        :class="{'bg-blue-600 text-white': p === pageNum, 'bg-white text-gray-700 hover:bg-gray-50': p !== pageNum}"
+                        class="px-3 py-1 border border-gray-300 rounded">
+                    <span x-text="p"></span>
+                </button>
+                <button @click="nextPage()" 
+                        :disabled="pageNum >= totalPages"
+                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        var prefix = ctx + "system/config";
+        
+        function configPage() {
+            return {
+                loading: false,
+                configs: [],
+                selectedConfigs: [],
+                searchParams: {
+                    configName: '',
+                    configKey: '',
+                    configType: '',
+                    beginTime: '',
+                    endTime: ''
+                },
+                pageNum: 1,
+                pageSize: 10,
+                total: 0,
+                
+                init() {
+                    this.loadConfigs();
+                },
+                
+                get totalPages() {
+                    return Math.ceil(this.total / this.pageSize);
+                },
+                
+                get visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pageNum - 2);
+                    const end = Math.min(this.totalPages, this.pageNum + 2);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                },
+                
+                get startIndex() {
+                    return Math.min((this.pageNum - 1) * this.pageSize + 1, this.total);
+                },
+                
+                get endIndex() {
+                    return Math.min(this.pageNum * this.pageSize, this.total);
+                },
+                
+                async loadConfigs() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams();
+                        Object.keys(this.searchParams).forEach(key => {
+                            if (this.searchParams[key]) {
+                                params.append(key, this.searchParams[key]);
+                            }
+                        });
+                        params.append('pageNum', this.pageNum);
+                        params.append('pageSize', this.pageSize);
+                        
+                        const response = await fetch(prefix + '/list?' + params.toString());
+                        const data = await response.json();
+                        if (data.code === 0) {
+                            this.configs = data.rows || [];
+                            this.total = data.total || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载配置列表失败:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedConfigs = this.configs.map(c => c.configId);
+                    } else {
+                        this.selectedConfigs = [];
+                    }
+                },
+                
+                searchConfigs() {
+                    this.pageNum = 1;
+                    this.loadConfigs();
+                },
+                
+                resetSearch() {
+                    this.searchParams = {
+                        configName: '',
+                        configKey: '',
+                        configType: '',
+                        beginTime: '',
+                        endTime: ''
+                    };
+                    this.pageNum = 1;
+                    this.loadConfigs();
+                },
+                
+                addConfig() {
+                    window.location.href = prefix + '/add';
+                },
+                
+                editConfig(configId) {
+                    const id = configId || this.selectedConfigs[0];
+                    if (!id) {
+                        alert('请选择一条记录进行编辑');
+                        return;
+                    }
+                    window.location.href = prefix + '/edit/' + id;
+                },
+                
+                deleteConfig(configId) {
+                    if (confirm('确认要删除该配置吗？')) {
+                        fetch(prefix + '/remove/' + configId, { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.code === 0) {
+                                    alert('删除成功');
+                                    this.loadConfigs();
+                                } else {
+                                    alert(data.msg || '删除失败');
+                                }
+                            });
+                    }
+                },
+                
+                deleteConfigs() {
+                    if (this.selectedConfigs.length === 0) {
+                        alert('请选择要删除的配置');
+                        return;
+                    }
+                    if (confirm(`确认要删除选中的 ${this.selectedConfigs.length} 条配置吗？`)) {
+                        fetch(prefix + '/remove', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'ids=' + this.selectedConfigs.join(',')
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 0) {
+                                alert('删除成功');
+                                this.selectedConfigs = [];
+                                this.loadConfigs();
+                            } else {
+                                alert(data.msg || '删除失败');
+                            }
+                        });
+                    }
+                },
+                
+                exportConfigs() {
+                    const params = new URLSearchParams();
+                    Object.keys(this.searchParams).forEach(key => {
+                        if (this.searchParams[key]) {
+                            params.append(key, this.searchParams[key]);
+                        }
+                    });
+                    window.location.href = prefix + '/export?' + params.toString();
+                },
+                
+                refreshCache() {
+                    if (confirm('确认要刷新配置缓存吗？')) {
+                        fetch(prefix + '/refreshCache', { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.code === 0) {
+                                    alert('刷新成功');
+                                } else {
+                                    alert(data.msg || '刷新失败');
+                                }
+                            });
+                    }
+                },
+                
+                prevPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        this.loadConfigs();
+                    }
+                },
+                
+                nextPage() {
+                    if (this.pageNum < this.totalPages) {
+                        this.pageNum++;
+                        this.loadConfigs();
+                    }
+                },
+                
+                goToPage(page) {
+                    this.pageNum = page;
+                    this.loadConfigs();
+                }
+            }
         }
     </script>
+    
+    <th:block th:include="include :: footer" />
 </body>
 </html>
