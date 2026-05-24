@@ -56,7 +56,7 @@ public class SysRoleController extends BaseController
     @GetMapping()
     public String role()
     {
-        return prefix + "/role-new";
+        return prefix + "/role";
     }
 
     @RequiresPermissions("system:role:list")

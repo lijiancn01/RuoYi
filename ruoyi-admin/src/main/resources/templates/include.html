@@ -5,7 +5,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="keywords" content="">
 	<meta name="description" content="">
-	<meta th:content="${session.csrf_token}" name="csrf-token"/>
+	<meta name="csrf-token"/>
 	<title th:text="${title}"></title>
 	<!-- Tailwind CSS 3 -->
 	<script src="https://cdn.tailwindcss.com"></script>
@@ -19,5 +19,5 @@
 
 <!-- 新技术栈通用JS -->
 <div th:fragment="footer">
-    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = [[${session.lockscreen}]]; if(lockscreen){window.top.location=ctx+"lockscreen";} </script>
+    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = null; if(lockscreen){window.top.location=ctx+"lockscreen";} </script>
 </div>

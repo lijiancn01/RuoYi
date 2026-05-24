@@ -140,78 +140,90 @@
                     <span x-show="sidebarOpen">首页</span>
                 </a>
                 
-                <!-- 动态菜单 - 一级菜单 -->
-                <template th:each="menu : ${menus}">
-                    <div class="relative">
-                        <!-- 菜单项 -->
-                        <a 
-                            th:href="${#strings.isEmpty(menu.url) || menu.url == '#' ? 'javascript:void(0);' : @{${menu.url}}}"
-                            class="menu-item flex items-center justify-between px-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
-                            th:id="'menu-' + ${menu.menuId}"
-                            @click.prevent="toggleMenu('menu-' + ${menu.menuId})"
-                        >
-                            <div class="flex items-center gap-3">
-                                <i class="fas" th:class="${menu.icon}"></i>
-                                <span x-show="sidebarOpen" th:text="${menu.menuName}">菜单</span>
-                            </div>
-                            <i 
-                                x-show="sidebarOpen"
-                                class="fas transition-transform" 
-                                :class="isMenuOpen('menu-' + ${menu.menuId}) ? 'fa-chevron-down' : 'fa-chevron-right'"
-                            ></i>
-                        </a>
-                        
-                        <!-- 二级菜单 -->
-                        <div 
-                            x-show="isMenuOpen('menu-' + ${menu.menuId}) && sidebarOpen"
-                            x-transition
-                            class="bg-slate-900"
-                        >
-                            <template th:each="cmenu : ${menu.children}">
-                                <!-- 检查是否有三级菜单 -->
-                                <div th:if="${not #lists.isEmpty(cmenu.children)}">
-                                    <a 
-                                        href="javascript:void(0);"
-                                        class="menu-item flex items-center justify-between pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
-                                        th:id="'submenu-' + ${cmenu.menuId}"
-                                        @click.prevent="toggleMenu('submenu-' + ${cmenu.menuId})"
-                                    >
-                                        <span th:text="${cmenu.menuName}">子菜单</span>
-                                        <i 
-                                            class="fas transition-transform text-xs" 
-                                            :class="isMenuOpen('submenu-' + ${cmenu.menuId}) ? 'fa-chevron-down' : 'fa-chevron-right'"
-                                        ></i>
-                                    </a>
-                                    
-                                    <!-- 三级菜单 -->
-                                    <div 
-                                        x-show="isMenuOpen('submenu-' + ${cmenu.menuId})"
-                                        x-transition
-                                        class="bg-slate-800"
-                                    >
-                                        <template th:each="emenu : ${cmenu.children}">
-                                            <a 
-                                                th:href="@{${emenu.url}}"
-                                                class="menu-item flex items-center gap-3 pl-16 pr-4 py-3 hover:bg-slate-700 transition-colors"
-                                                @click.prevent="openTab('menu-' + ${emenu.menuId}, ${emenu.menuName}, ${#strings.prepend(emenu.url, '/')})"
-                                                th:text="${emenu.menuName}"
-                                            >三级菜单</a>
-                                        </template>
-                                    </div>
-                                </div>
-                                
-                                <!-- 没有三级菜单的情况 -->
-                                <a 
-                                    th:if="${#lists.isEmpty(cmenu.children)}"
-                                    th:href="@{${cmenu.url}}"
-                                    class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
-                                    @click.prevent="openTab('menu-' + ${cmenu.menuId}, ${cmenu.menuName}, ${#strings.prepend(cmenu.url, '/')})"
-                                    th:text="${cmenu.menuName}"
-                                >二级菜单</a>
-                            </template>
-                        </div>
+                <!-- 系统管理 -->
+                <a 
+                    href="javascript:void(0);"
+                    class="menu-item flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
+                    id="menu-system"
+                    @click.prevent="toggleMenu('menu-system')"
+                >
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-sliders-h w-5 text-center"></i>
+                        <span x-show="sidebarOpen">系统管理</span>
                     </div>
-                </template>
+                    <i 
+                        x-show="sidebarOpen"
+                        class="fas transition-transform" 
+                        :class="isMenuOpen('menu-system') ? 'fa-chevron-down' : 'fa-chevron-right'"
+                    ></i>
+                </a>
+                <div x-show="isMenuOpen('menu-system') && sidebarOpen" x-transition class="bg-slate-900">
+                    <a 
+                        th:href="@{/system/user}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('system-user', '用户管理', '/system/user')"
+                    >用户管理</a>
+                    <a 
+                        th:href="@{/system/role}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('system-role', '角色管理', '/system/role')"
+                    >角色管理</a>
+                    <a 
+                        th:href="@{/system/menu}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('system-menu', '菜单管理', '/system/menu')"
+                    >菜单管理</a>
+                    <a 
+                        th:href="@{/system/dept}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('system-dept', '部门管理', '/system/dept')"
+                    >部门管理</a>
+                    <a 
+                        th:href="@{/system/config}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('system-config', '参数设置', '/system/config')"
+                    >参数设置</a>
+                </div>
+                
+                <!-- 系统监控 -->
+                <a 
+                    href="javascript:void(0);"
+                    class="menu-item flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors cursor-pointer"
+                    id="menu-monitor"
+                    @click.prevent="toggleMenu('menu-monitor')"
+                >
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-tv w-5 text-center"></i>
+                        <span x-show="sidebarOpen">系统监控</span>
+                    </div>
+                    <i 
+                        x-show="sidebarOpen"
+                        class="fas transition-transform" 
+                        :class="isMenuOpen('menu-monitor') ? 'fa-chevron-down' : 'fa-chevron-right'"
+                    ></i>
+                </a>
+                <div x-show="isMenuOpen('menu-monitor') && sidebarOpen" x-transition class="bg-slate-900">
+                    <a 
+                        th:href="@{/monitor/logininfor}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('monitor-logininfor', '登录日志', '/monitor/logininfor')"
+                    >登录日志</a>
+                    <a 
+                        th:href="@{/monitor/online}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('monitor-online', '在线用户', '/monitor/online')"
+                    >在线用户</a>
+                    <a 
+                        th:href="@{/monitor/operlog}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('monitor-operlog', '操作日志', '/monitor/operlog')"
+                    >操作日志</a>
+                    <a 
+                        th:href="@{/monitor/server}"
+                        class="menu-item flex items-center gap-3 pl-12 pr-4 py-3 hover:bg-slate-700 transition-colors"
+                        @click.prevent="openTab('monitor-server', '服务监控', '/monitor/server')"
+                    >服务监控</a>
+                </div>
             </nav>
             
             <!-- 底部收缩按钮 -->
@@ -397,7 +409,7 @@
         </div>
     </div>
     
-    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = [[${session.lockscreen}]]; if (lockscreen) { window.top.location = ctx + "lockscreen"; }</script>
+    <script th:inline="javascript"> var ctx = [[@{/}]]; var lockscreen = null; if (lockscreen) { window.top.location = ctx + "lockscreen"; }</script>
     <th:block th:include="include :: footer"></th:block>
 </body>
 </html>

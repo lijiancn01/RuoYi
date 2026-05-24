@@ -8,7 +8,8 @@ import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.ModelAndView;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -25,7 +26,7 @@ import com.ruoyi.common.utils.security.PermissionUtils;
  * 
  * @author ruoyi
  */
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler
 {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -52,6 +53,7 @@ public class GlobalExceptionHandler
      * 请求方式不支持
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseBody
     public AjaxResult handleHttpRequestMethodNotSupported(HttpRequestMethodNotSupportedException e,
             HttpServletRequest request)
     {
@@ -64,22 +66,36 @@ public class GlobalExceptionHandler
      * 拦截未知的运行时异常
      */
     @ExceptionHandler(RuntimeException.class)
-    public AjaxResult handleRuntimeException(RuntimeException e, HttpServletRequest request)
+    public Object handleRuntimeException(RuntimeException e, HttpServletRequest request)
     {
         String requestURI = request.getRequestURI();
         log.error("请求地址'{}',发生未知异常.", requestURI, e);
-        return AjaxResult.error(e.getMessage());
+        if (ServletUtils.isAjaxRequest(request))
+        {
+            return AjaxResult.error(e.getMessage());
+        }
+        else
+        {
+            return new ModelAndView("error/500");
+        }
     }
 
     /**
      * 系统异常
      */
     @ExceptionHandler(Exception.class)
-    public AjaxResult handleException(Exception e, HttpServletRequest request)
+    public Object handleException(Exception e, HttpServletRequest request)
     {
         String requestURI = request.getRequestURI();
         log.error("请求地址'{}',发生系统异常.", requestURI, e);
-        return AjaxResult.error(e.getMessage());
+        if (ServletUtils.isAjaxRequest(request))
+        {
+            return AjaxResult.error(e.getMessage());
+        }
+        else
+        {
+            return new ModelAndView("error/500");
+        }
     }
 
     /**
@@ -103,6 +119,7 @@ public class GlobalExceptionHandler
      * 请求路径中缺少必需的路径变量
      */
     @ExceptionHandler(MissingPathVariableException.class)
+    @ResponseBody
     public AjaxResult handleMissingPathVariableException(MissingPathVariableException e, HttpServletRequest request)
     {
         String requestURI = request.getRequestURI();
@@ -114,6 +131,7 @@ public class GlobalExceptionHandler
      * 请求参数类型不匹配
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseBody
     public AjaxResult handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e,
             HttpServletRequest request)
     {
@@ -131,6 +149,7 @@ public class GlobalExceptionHandler
      * 自定义验证异常
      */
     @ExceptionHandler(BindException.class)
+    @ResponseBody
     public AjaxResult handleBindException(BindException e)
     {
         log.error(e.getMessage(), e);
@@ -142,6 +161,7 @@ public class GlobalExceptionHandler
      * 演示模式异常
      */
     @ExceptionHandler(DemoModeException.class)
+    @ResponseBody
     public AjaxResult handleDemoModeException(DemoModeException e)
     {
         return AjaxResult.error("演示模式，不允许操作");

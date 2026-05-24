@@ -21,7 +21,7 @@
                 <!-- 左侧 -->
                 <div class="flex-1">
                     <h1 class="text-3xl font-bold text-gray-800 mb-2">
-                        Hello, <span class="text-blue-600" th:text="${session.get('org.apache.shiro.subject.support.DefaultSubject_CONTEXT').principal.loginName}">Guest</span>!
+                        Hello, <span class="text-blue-600" th:text="${user.loginName}">Guest</span>!
                     </h1>
                     <p class="text-gray-500 mb-4">移动设备访问请扫描以下二维码：</p>
                     <img th:src="@{/img/qr_code.png}" alt="QR Code" class="w-32">

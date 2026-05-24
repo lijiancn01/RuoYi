@@ -118,6 +118,7 @@ public class SysIndexController extends BaseController
     public String main(ModelMap mmap)
     {
         mmap.put("version", RuoYiConfig.getVersion());
+        mmap.put("user", getSysUser());
         return "main";
     }
 
