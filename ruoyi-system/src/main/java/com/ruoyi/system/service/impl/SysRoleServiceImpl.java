@@ -232,12 +232,15 @@ public class SysRoleServiceImpl implements ISysRoleService
         int rows = 1;
         // 新增用户与角色管理
         List<SysRoleMenu> list = new ArrayList<SysRoleMenu>();
-        for (Long menuId : role.getMenuIds())
+        if (role.getMenuIds() != null && role.getMenuIds().length > 0)
         {
-            SysRoleMenu rm = new SysRoleMenu();
-            rm.setRoleId(role.getRoleId());
-            rm.setMenuId(menuId);
-            list.add(rm);
+            for (Long menuId : role.getMenuIds())
+            {
+                SysRoleMenu rm = new SysRoleMenu();
+                rm.setRoleId(role.getRoleId());
+                rm.setMenuId(menuId);
+                list.add(rm);
+            }
         }
         if (list.size() > 0)
         {
@@ -256,12 +259,15 @@ public class SysRoleServiceImpl implements ISysRoleService
         int rows = 1;
         // 新增角色与部门（数据权限）管理
         List<SysRoleDept> list = new ArrayList<SysRoleDept>();
-        for (Long deptId : role.getDeptIds())
+        if (role.getDeptIds() != null && role.getDeptIds().length > 0)
         {
-            SysRoleDept rd = new SysRoleDept();
-            rd.setRoleId(role.getRoleId());
-            rd.setDeptId(deptId);
-            list.add(rd);
+            for (Long deptId : role.getDeptIds())
+            {
+                SysRoleDept rd = new SysRoleDept();
+                rd.setRoleId(role.getRoleId());
+                rd.setDeptId(deptId);
+                list.add(rd);
+            }
         }
         if (list.size() > 0)
         {

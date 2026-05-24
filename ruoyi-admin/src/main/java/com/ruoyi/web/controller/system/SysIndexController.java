@@ -67,25 +67,9 @@ public class SysIndexController extends BaseController
         mmap.put("isPasswordExpired", passwordIsExpiration(user.getPwdUpdateDate()));
         mmap.put("isMobile", ServletUtils.checkAgentIsMobile(ServletUtils.getRequest().getHeader("User-Agent")));
 
-        // 菜单导航显示风格
-        String menuStyle = configService.selectConfigByKey("sys.index.menuStyle");
-        // 移动端，默认使左侧导航菜单，否则取默认配置
-        String indexStyle = ServletUtils.checkAgentIsMobile(ServletUtils.getRequest().getHeader("User-Agent")) ? "index" : menuStyle;
-
-        // 优先Cookie配置导航菜单
-        Cookie[] cookies = ServletUtils.getRequest().getCookies();
-        for (Cookie cookie : cookies)
-        {
-            if (StringUtils.isNotEmpty(cookie.getName()) && "nav-style".equalsIgnoreCase(cookie.getName()))
-            {
-                indexStyle = cookie.getValue();
-                break;
-            }
-        }
-        String webIndex = "topnav".equalsIgnoreCase(indexStyle) ? "index-topnav" : "index";
         // CSRF Token
         request.getSession().setAttribute(ShiroConstants.CSRF_TOKEN, ServletUtils.generateToken());
-        return webIndex;
+        return "index";
     }
 
     // 锁定屏幕
